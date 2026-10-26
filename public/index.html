@@ -1,253 +1,941 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Transaction Ledger</title>
-  <style>
-    :root {
-      --bg: #f6f7f9; --card: #fff; --text: #1d2330; --muted: #667085; --border: #e3e6eb;
-      --accent: #2f5bea; --credit: #127a3c; --debit: #b42318; --error-bg: #fdecea;
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Paisa Wallet</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap">
+<style>
+  /* Layout: one phone-width column — purple header band, balance card, action grid, activity feed, fixed bottom tabs; actions open as bottom sheets. */
+  :root {
+    --brand: #5f259f;        /* wallet purple */
+    --brand-strong: #4a1c7e;
+    --brand-tint: #f0e8fa;
+    --header-bg: #5f259f;
+    --on-brand: #ffffff;
+    --bg: #f3f1f7;
+    --backdrop: #e9e5f0;
+    --surface: #ffffff;
+    --fg: #1f1530;
+    --muted: #6d6480;
+    --line: #e6e1ee;
+    --credit: #0d7f45;
+    --credit-tint: #e3f5ec;
+    --debit: #c22d3a;
+    --debit-tint: #fce9eb;
+    --warn: #8a5300;
+    --warn-tint: #fff3dc;
+    --scrim: rgba(20, 10, 35, 0.45);
+    --shadow: 0 1px 2px rgba(40, 20, 70, 0.06), 0 4px 16px rgba(40, 20, 70, 0.06);
+    --font: "Figtree", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+    --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+    --app-w: 460px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --brand: #9b6ce0; --brand-strong: #b48cf0; --brand-tint: #2a1f3d; --header-bg: #2c1650; --on-brand: #ffffff;
+      --bg: #120d1a; --backdrop: #0b0811; --surface: #1c1527; --fg: #f1ecf8; --muted: #a79cba; --line: #2f2642;
+      --credit: #45d08c; --credit-tint: #13301f; --debit: #ff7d86; --debit-tint: #3a1820; --warn: #ffc266; --warn-tint: #3a2a10;
+      --scrim: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+      color-scheme: dark;
     }
-    * { box-sizing: border-box; }
-    body { margin: 0; font: 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: var(--text); }
-    header { padding: 16px; border-bottom: 1px solid var(--border); background: var(--card); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
-    header h1 { font-size: 18px; margin: 0; }
-    main { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; grid-template-columns: 320px 1fr; }
-    @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
-    section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
-    h2 { font-size: 15px; margin: 0 0 12px; }
-    label { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 4px; }
-    input, select, button { font: inherit; width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--text); }
-    button { background: var(--accent); color: #fff; border: 0; cursor: pointer; margin-top: 10px; }
-    button.secondary { background: #fff; color: var(--text); border: 1px solid var(--border); width: auto; margin: 0; }
-    .row { display: flex; gap: 8px; align-items: end; }
-    .row > * { flex: 1; }
-    .accounts { list-style: none; padding: 0; margin: 0; max-height: 260px; overflow: auto; }
-    .accounts li { padding: 8px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
-    .accounts li:hover { background: var(--bg); }
-    .accounts li.active { background: #e8eefc; }
-    .balance { font-size: 28px; font-weight: 600; margin: 4px 0 12px; }
-    .muted { color: var(--muted); font-size: 13px; word-break: break-all; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
-    td.when { white-space: nowrap; }
-    td.amount { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .credit { color: var(--credit); } .debit { color: var(--debit); }
-    .table-wrap { overflow-x: auto; }
-    .pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 10px; }
-    #log { white-space: pre-wrap; font: 12px/1.4 ui-monospace, Menlo, monospace; background: #0f1420; color: #d6deeb; border-radius: 8px; padding: 12px; max-height: 260px; overflow: auto; margin: 0; }
-    .error { background: var(--error-bg); color: var(--debit); padding: 8px 10px; border-radius: 6px; margin-top: 10px; font-size: 14px; }
-    .grid2 { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
-    @media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } }
-    .api-base { display: flex; gap: 8px; align-items: center; min-width: 0; flex: 1; max-width: 460px; }
-    .api-base input { flex: 1; min-width: 0; }
-  </style>
+  }
+  :root[data-theme="dark"] {
+    --brand: #9b6ce0; --brand-strong: #b48cf0; --brand-tint: #2a1f3d; --header-bg: #2c1650; --on-brand: #ffffff;
+    --bg: #120d1a; --backdrop: #0b0811; --surface: #1c1527; --fg: #f1ecf8; --muted: #a79cba; --line: #2f2642;
+    --credit: #45d08c; --credit-tint: #13301f; --debit: #ff7d86; --debit-tint: #3a1820; --warn: #ffc266; --warn-tint: #3a2a10;
+    --scrim: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--backdrop); color: var(--fg); font: 15px/1.45 var(--font); -webkit-font-smoothing: antialiased; }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--header-bg); }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  .app { max-width: var(--app-w); margin: 0 auto; min-height: 100%; background: var(--bg); padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); position: relative; }
+
+  /* ---------- header ---------- */
+  .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--header-bg); color: var(--on-brand);
+         padding: 12px var(--gutter-r) 12px var(--gutter-l); display: flex; align-items: center; gap: 12px; }
+  .who { display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 0; color: inherit; min-width: 0; flex: 1; text-align: left; }
+  .who .avatar { background: rgba(255,255,255,.18); color: var(--on-brand); }
+  .who-text { min-width: 0; }
+  .who-label { font-size: 12px; opacity: .8; display: block; }
+  .who-name { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mode-pill { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.16); border: 0; color: inherit; }
+  .mode-pill.live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #5fe39a; margin-right: 6px; vertical-align: 1px; }
+
+  .avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 14px; flex: none; background: var(--brand-tint); color: var(--brand); }
+  .avatar.sm { width: 36px; height: 36px; font-size: 13px; }
+
+  .demo-note { margin: 0; padding: 8px var(--gutter-r) 8px var(--gutter-l); font-size: 12.5px; background: var(--brand-tint); color: var(--fg); display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .demo-note button { background: none; border: 0; color: var(--brand); font-weight: 700; padding: 4px 0; white-space: nowrap; }
+
+  main { padding: 16px var(--gutter-r) 16px var(--gutter-l); display: grid; gap: 16px; }
+
+  /* ---------- balance + actions ---------- */
+  .card { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); }
+  .balance { padding: 18px; display: grid; gap: 4px; }
+  .balance-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .label { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .amount-xl { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+  .icon-btn { background: none; border: 0; padding: 8px; border-radius: 50%; color: var(--muted); display: grid; place-items: center; }
+  .icon-btn:hover { background: var(--brand-tint); color: var(--brand); }
+  .acct-id { font-family: var(--mono); font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; background: none; border: 0; padding: 0; text-align: left; }
+
+  .actions { padding: 16px 8px 14px; }
+  .actions h2 { margin: 0 10px 12px; font-size: 15px; font-weight: 700; }
+  .action-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .action { background: none; border: 0; display: grid; justify-items: center; align-content: start; gap: 8px; padding: 6px 2px; border-radius: 12px; font-size: 12.5px; font-weight: 600; line-height: 1.25; text-align: center; }
+  .action:hover { background: var(--brand-tint); }
+  .action .tile { width: 48px; height: 48px; border-radius: 14px; background: var(--brand); color: var(--on-brand); display: grid; place-items: center; }
+
+  .section-head { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 16px 6px; }
+  .section-head h2 { margin: 0; font-size: 15px; font-weight: 700; }
+  .link { background: none; border: 0; color: var(--brand); font-weight: 700; font-size: 13.5px; padding: 4px 0; }
+
+  /* ---------- transaction list ---------- */
+  .tx-list { list-style: none; margin: 0; padding: 0 0 6px; }
+  .tx { display: flex; align-items: center; gap: 12px; padding: 10px 16px; width: 100%; background: none; border: 0; text-align: left; }
+  .tx:hover { background: var(--brand-tint); }
+  .tx-ico { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+  .tx-ico.credit { background: var(--credit-tint); color: var(--credit); }
+  .tx-ico.debit { background: var(--debit-tint); color: var(--debit); }
+  .tx-main { flex: 1; min-width: 0; }
+  .tx-title, .tx-sub { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tx-title { font-weight: 600; }
+  .tx-sub { font-size: 12.5px; color: var(--muted); }
+  .tx-amt { font-weight: 700; white-space: nowrap; text-align: right; }
+  .tx-amt.credit { color: var(--credit); }
+  .tx-amt .kind { display: block; font-size: 11.5px; font-weight: 500; color: var(--muted); }
+  .day { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; padding: 14px 16px 4px; }
+  .empty { padding: 28px 20px 30px; text-align: center; color: var(--muted); display: grid; gap: 10px; justify-items: center; }
+  .empty strong { color: var(--fg); font-size: 15px; }
+
+  /* ---------- history ---------- */
+  .page-title { margin: 0; font-size: 20px; font-weight: 800; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--line); background: var(--surface); padding: 7px 14px; border-radius: 999px; font-weight: 600; font-size: 13.5px; }
+  .chip[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+  .pager { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--line); }
+  .pager span { font-size: 13px; color: var(--muted); }
+  .pager div { display: flex; gap: 8px; }
+  .btn-ghost { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 7px 12px; font-weight: 600; font-size: 13.5px; }
+  .btn-ghost:disabled { opacity: .4; cursor: default; }
+
+  /* ---------- accounts / developer ---------- */
+  .row-btn { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; background: none; border: 0; text-align: left; border-top: 1px solid var(--line); }
+  .row-btn:first-child { border-top: 0; }
+  .row-btn:hover { background: var(--brand-tint); }
+  .row-main { flex: 1; min-width: 0; }
+  .row-title { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-sub { display: block; font-size: 12.5px; color: var(--muted); }
+  .tick { color: var(--brand); }
+  .settings { padding: 16px; display: grid; gap: 12px; min-width: 0; }
+  .settings p { margin: 0; color: var(--muted); font-size: 13.5px; }
+  pre.log { margin: 0; font: 12px/1.5 var(--mono); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow-x: auto; max-height: 360px; white-space: pre; }
+
+  /* ---------- bottom nav ---------- */
+  .tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: min(var(--app-w), 100%); z-index: 20;
+          background: var(--surface); border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(4, 1fr);
+          padding: 6px var(--gutter-r) calc(6px + env(safe-area-inset-bottom, 0px)) var(--gutter-l); }
+  .tab { background: none; border: 0; display: grid; justify-items: center; gap: 2px; padding: 6px 0; font-size: 11.5px; font-weight: 600; color: var(--muted); border-radius: 10px; }
+  .tab[aria-current="page"] { color: var(--brand); }
+
+  /* ---------- sheets ---------- */
+  .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 40; display: flex; align-items: flex-end; justify-content: center; animation: fade .15s ease-out; }
+  .sheet { width: min(var(--app-w), 100%); max-height: 92%; overflow-y: auto; background: var(--surface); border-radius: 20px 20px 0 0;
+           padding: 8px var(--gutter-r) calc(20px + env(safe-area-inset-bottom, 0px)) var(--gutter-l); animation: up .22s cubic-bezier(.2,.8,.2,1); }
+  .grabber { width: 40px; height: 4px; border-radius: 4px; background: var(--line); margin: 4px auto 12px; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .sheet-head h3 { margin: 0; font-size: 18px; font-weight: 800; }
+  .stack { display: grid; gap: 14px; }
+  .field { display: grid; gap: 6px; }
+  .field label, .field .label { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--bg); }
+  .input:focus { outline: none; border-color: var(--brand); }
+  .amount-box { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 18px 10px 10px; }
+  .amount-box span { font-size: 30px; font-weight: 700; color: var(--muted); }
+  .amount-box input { border: 0; background: none; font-size: 40px; font-weight: 800; width: 7ch; text-align: left; padding: 0; letter-spacing: -0.02em; }
+  .amount-box input:focus { outline: none; }
+  .amount-box input::placeholder { color: var(--line); }
+  .quick { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .hint { font-size: 12.5px; color: var(--muted); text-align: center; min-height: 18px; }
+  .hint.bad { color: var(--debit); }
+  .ref-row { display: flex; gap: 8px; align-items: center; }
+  .ref-row .input { font-family: var(--mono); font-size: 13px; min-width: 0; }
+  .small { font-size: 12.5px; color: var(--muted); margin: 0; }
+  .btn { width: 100%; border: 0; border-radius: 14px; padding: 14px; font-weight: 700; font-size: 16px; background: var(--brand); color: var(--on-brand); }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.secondary { background: var(--brand-tint); color: var(--brand); }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-row .btn { flex: 1; min-width: 140px; }
+  .payees { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  .payee { background: none; border: 2px solid transparent; border-radius: 14px; padding: 8px 6px; display: grid; justify-items: center; gap: 6px; width: 84px; flex: none; font-size: 12.5px; font-weight: 600; }
+  .payee span:last-child { max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .payee[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-tint); }
+  .from-to { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--muted); }
+  .from-to strong { color: var(--fg); }
+  .detail { display: grid; margin: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .detail div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 12px; border-top: 1px solid var(--line); font-size: 13.5px; }
+  .detail div:first-child { border-top: 0; }
+  .detail dt { color: var(--muted); flex: none; }
+  .detail dd { margin: 0; text-align: right; word-break: break-all; font-weight: 600; }
+  .detail .mono { font-family: var(--mono); font-size: 12px; font-weight: 500; }
+
+  .result { text-align: center; display: grid; gap: 10px; justify-items: center; padding: 8px 0 4px; }
+  .badge { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; animation: pop .35s cubic-bezier(.2,1.4,.4,1); color: var(--surface); }
+  .badge.ok { background: var(--credit); }
+  .badge.fail { background: var(--debit); }
+  .badge.warn { background: var(--warn); }
+  .result h3 { margin: 4px 0 0; font-size: 20px; font-weight: 800; text-wrap: balance; }
+  .result .amount-xl { font-size: 30px; }
+  .result p { margin: 0; color: var(--muted); max-width: 34ch; }
+  .code-tag { font-family: var(--mono); font-size: 11.5px; padding: 3px 8px; border-radius: 6px; background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+  .notice { font-size: 13px; padding: 10px 12px; border-radius: 10px; background: var(--warn-tint); color: var(--warn); margin: 14px 0 0; }
+  .gap { height: 14px; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60;
+           background: var(--fg); color: var(--surface); padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 14px; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
+  .spinner { width: 18px; height: 18px; border: 2.5px solid var(--brand-tint); border-top-color: var(--on-brand); border-radius: 50%; display: inline-block; animation: spin .7s linear infinite; vertical-align: -3px; }
+
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes up { from { transform: translateY(40px); opacity: .4; } }
+  @keyframes pop { from { transform: scale(.5); opacity: 0; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
+</style>
 </head>
 <body>
-  <header>
-    <h1>Transaction Ledger</h1>
-    <div class="api-base">
-      <span class="muted">API</span>
-      <input id="apiBase" placeholder="same origin" />
-    </div>
+<div class="app" id="app">
+  <header class="top">
+    <button class="who" id="whoBtn" aria-label="Switch account">
+      <span class="avatar" id="whoAvatar">··</span>
+      <span class="who-text">
+        <span class="who-label">Paying from</span>
+        <span class="who-name"><span id="whoName">Loading…</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+      </span>
+    </button>
+    <button class="mode-pill" id="modePill" title="Connection settings">Demo</button>
   </header>
+  <p class="demo-note" id="demoNote" hidden>
+    <span>Demo mode: sample data, saved only in this browser.</span>
+    <button id="resetDemo">Reset</button>
+  </p>
 
-  <main>
-    <div style="display: grid; gap: 16px; align-content: start;">
-      <section>
-        <h2>New account</h2>
-        <form id="accountForm">
-          <label for="accName">Name</label>
-          <input id="accName" required placeholder="Aman Singh" />
-          <button>Create account</button>
-        </form>
-      </section>
-      <section>
-        <h2>Accounts</h2>
-        <ul class="accounts" id="accounts"><li class="muted">Loading…</li></ul>
-      </section>
-    </div>
+  <main id="view"></main>
 
-    <div style="display: grid; gap: 16px; align-content: start; min-width: 0;">
-      <section id="detail">
-        <p class="muted">Create or pick an account to start.</p>
-      </section>
+  <nav class="tabs" aria-label="Main">
+    <button class="tab" data-view="home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+    <button class="tab" data-view="history"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>History</button>
+    <button class="tab" data-view="accounts"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/></svg>Accounts</button>
+    <button class="tab" data-view="dev"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 9-4 3 4 3M16 9l4 3-4 3M14 5l-4 14"/></svg>Developer</button>
+  </nav>
+</div>
 
-      <div class="grid2">
-        <section>
-          <h2>Credit / debit</h2>
-          <form id="txForm">
-            <div class="row">
-              <div><label for="txType">Type</label>
-                <select id="txType"><option value="credit">credit</option><option value="debit">debit</option></select></div>
-              <div><label for="txAmount">Amount (₹)</label><input id="txAmount" type="number" step="0.01" min="0.01" required /></div>
-            </div>
-            <label for="txRef">Reference ID</label>
-            <input id="txRef" required />
-            <label for="txDesc">Description</label>
-            <input id="txDesc" placeholder="optional" />
-            <button>Post transaction</button>
-          </form>
-        </section>
-        <section>
-          <h2>Transfer</h2>
-          <form id="trForm">
-            <label for="trTo">To account</label>
-            <select id="trTo"></select>
-            <div class="row">
-              <div><label for="trAmount">Amount (₹)</label><input id="trAmount" type="number" step="0.01" min="0.01" required /></div>
-              <div><label for="trRef">Reference ID</label><input id="trRef" placeholder="optional" /></div>
-            </div>
-            <button>Transfer from selected account</button>
-          </form>
-        </section>
-      </div>
+<script src="config.js"></script>
+<script>
+/* =====================================================================
+   Paisa Wallet: frontend for the Transaction Ledger API.
+   Live mode calls the real API. Demo mode runs the same rules in the
+   browser (DemoLedger below) so the UI can be tried without a server.
+   ===================================================================== */
 
-      <section>
-        <div class="row" style="margin-bottom: 8px;">
-          <h2 style="margin: 0;">History</h2>
-          <select id="filterType" style="max-width: 160px;">
-            <option value="">All types</option><option value="credit">Credits</option><option value="debit">Debits</option>
-          </select>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>When</th><th>Type</th><th>Reference</th><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
-            <tbody id="history"></tbody>
-          </table>
-        </div>
-        <div class="pager">
-          <span class="muted" id="pageInfo"></span>
-          <button class="secondary" id="prev">Prev</button>
-          <button class="secondary" id="next">Next</button>
-        </div>
-      </section>
+// ---------- small helpers ----------
+const $ = (sel, root = document) => root.querySelector(sel);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+const uuid = () => (globalThis.crypto?.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+  const r = (Math.random() * 16) | 0; return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+}));
+const rupees = (n) => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: Number(n) % 1 ? 2 : 0, maximumFractionDigits: 2 });
+const initials = (name) => (name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+const shortId = (id) => (id ? id.slice(0, 8) + '…' + id.slice(-4) : '');
+const newRef = (prefix) => `${prefix}-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+const timeOf = (iso) => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+const fullDate = (iso) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+function dayLabel(iso) {
+  const d = new Date(iso), today = new Date(), y = new Date(); y.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return 'Today';
+  if (d.toDateString() === y.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+const svg = (size, sw, body) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const ICON = {
+  down: svg(20, 2.2, '<path d="M17 7 7 17M16 17H7V8"/>'),
+  up: svg(20, 2.2, '<path d="M7 17 17 7M8 7h9v9"/>'),
+  swap: svg(20, 2.2, '<path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/>'),
+  wallet: svg(22, 2, '<path d="M3 7a2 2 0 0 1 2-2h13v4"/><path d="M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2z"/><path d="M16 14.5h.01"/>'),
+  bag: svg(22, 2, '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>'),
+  send: svg(22, 2, '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>'),
+  user: svg(22, 2, '<circle cx="10" cy="8" r="4"/><path d="M3 21a7 7 0 0 1 12.5-4.3M19 14v6M16 17h6"/>'),
+  eye: svg(20, 2, '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'),
+  eyeOff: svg(20, 2, '<path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.6 9.6 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'),
+  copy: svg(14, 2, '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/>'),
+  check: svg(38, 3, '<path d="m5 12.5 4.5 4.5L19 7.5"/>'),
+  cross: svg(36, 3, '<path d="M7 7l10 10M17 7 7 17"/>'),
+  repeat: svg(34, 2.6, '<path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>'),
+  close: svg(20, 2.4, '<path d="M6 6l12 12M18 6 6 18"/>'),
+  tick: svg(20, 2.6, '<path d="m5 12.5 4.5 4.5L19 7.5"/>'),
+};
 
-      <section>
-        <h2>Last API response</h2>
-        <pre id="log">—</pre>
-      </section>
-    </div>
-  </main>
+// ---------- API errors + call log ----------
+class ApiError extends Error {
+  constructor(status, code, message, details) { super(message); Object.assign(this, { status, code, details }); }
+}
+const lastCall = { text: 'No API calls yet. Make a payment, then come back here.' };
+function logCall(method, path, body, status, data) {
+  lastCall.text = `${method} ${path}  →  ${status}\n` + (body ? `\nRequest body:\n${JSON.stringify(body, null, 2)}\n` : '') + `\nResponse:\n${JSON.stringify(data, null, 2)}`;
+}
 
-  <script src="config.js"></script>
-  <script>
-    const $ = (id) => document.getElementById(id);
-    const inr = (n) => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+/* =====================================================================
+   DemoLedger: an in-browser copy of the API's rules and responses.
+   Same validation, same error codes, same JSON shapes. Money in paise.
+   ===================================================================== */
+const DemoLedger = (() => {
+  const KEY = 'paisa-demo-v1';
+  let db;
 
-    // API base: ?api=… or the saved value, else window.API_BASE_URL, else same origin.
-    const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
-    const fromQuery = new URLSearchParams(location.search).get('api');
-    $('apiBase').value = fromQuery || store.get('apiBase') || window.API_BASE_URL || '';
-    $('apiBase').addEventListener('change', () => { store.set('apiBase', $('apiBase').value.trim()); loadAccounts(); });
-    const base = () => $('apiBase').value.trim().replace(/\/$/, '');
+  const save = () => store.set(KEY, JSON.stringify(db));
+  function load() {
+    try { db = JSON.parse(store.get(KEY)); } catch { db = null; }
+    if (!db || !Array.isArray(db.accounts)) seed();
+  }
+  function seed() {
+    db = { accounts: [], transactions: [], transfers: [], seq: 0 };
+    const ago = (days, h = 10, m = 0) => { const d = new Date(); d.setDate(d.getDate() - days); d.setHours(h, m, 0, 0); return d.toISOString(); };
+    const aman = acct('Aman Singh', ago(20)), priya = acct('Priya Sharma', ago(18)), cafe = acct('Chai Point Cafe', ago(15));
+    tx(aman, 'credit', 4500000, 'Salary – October', 'SAL-OCT-2026', ago(6, 9, 5));
+    tx(aman, 'debit', 1800000, 'Rent – Koramangala flat', 'RENT-OCT-2026', ago(5, 11, 20));
+    tx(aman, 'debit', 124000, 'Electricity bill', 'BILL-ELEC-OCT', ago(3, 18, 40));
+    tx(aman, 'debit', 48650, 'Swiggy order', 'SWG-88213', ago(1, 21, 15));
+    tx(priya, 'credit', 1200000, 'Freelance payment', 'INV-PS-1042', ago(4, 15, 0));
+    tx(cafe, 'credit', 865000, 'Daily sales', 'SALES-2410', ago(2, 20, 0));
+    xfer(aman, priya, 250000, 'Goa trip share', 'TRIP-GOA-01', ago(0, 0, 30));
+    xfer(aman, cafe, 18000, null, 'CP-7781', ago(0, 0, 45));
+    save();
+  }
+  function acct(name, at) { const a = { id: uuid(), name, balance: 0, created_at: at }; db.accounts.push(a); return a; }
+  function tx(a, type, paise, description, reference_id, at, transfer_id = null) {
+    const t = { id: uuid(), seq: ++db.seq, account_id: a.id, type, amount: paise, description, reference_id, transfer_id, created_at: at || new Date().toISOString() };
+    db.transactions.push(t); a.balance += type === 'credit' ? paise : -paise; return t;
+  }
+  function xfer(from, to, paise, description, ref, at) {
+    const t = { id: uuid(), from_account_id: from.id, to_account_id: to.id, amount: paise, description, reference_id: ref, created_at: at };
+    db.transfers.push(t);
+    tx(from, 'debit', paise, description ?? `Transfer to ${to.id}`, `transfer:${ref}`, at, t.id);
+    tx(to, 'credit', paise, description ?? `Transfer from ${from.id}`, `transfer:${ref}`, at, t.id);
+    return t;
+  }
 
-    let selected = null, page = 1, accounts = [];
-    const newRef = () => 'ref-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    $('txRef').value = newRef();
+  // --- mirrors of the API's validation ---
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const bad = (code, message) => new ApiError(400, code, message);
+  const insufficient = (a, requested) => new ApiError(422, 'INSUFFICIENT_BALANCE',
+    `Insufficient balance: account has ${a.balance / 100}, debit needs ${requested}`, { account_id: a.id, balance: a.balance / 100, requested });
+  function checkId(id) { if (!UUID_RE.test(id || '')) throw bad('INVALID_ACCOUNT_ID', `"${id}" is not a valid account id (expected a UUID)`); }
+  function find(id) {
+    checkId(id);
+    const a = db.accounts.find((x) => x.id === id);
+    if (!a) throw new ApiError(404, 'ACCOUNT_NOT_FOUND', `Account ${id} was not found`, { account_id: id });
+    return a;
+  }
+  function checkAmount(v) {
+    if (typeof v !== 'number' || !Number.isFinite(v)) throw bad('INVALID_AMOUNT', 'amount must be a number');
+    if (v <= 0) throw bad('INVALID_AMOUNT', 'amount must be greater than 0');
+    if (v > 1e9) throw bad('INVALID_AMOUNT', 'amount must be at most 1000000000');
+    if (Math.abs(v * 100 - Math.round(v * 100)) > 1e-6) throw bad('INVALID_AMOUNT', 'amount can have at most 2 decimal places');
+    return Math.round(v * 100);
+  }
+  function checkRef(v) {
+    if (typeof v !== 'string' || !v.trim()) throw bad('INVALID_REQUEST_BODY', 'reference_id is required');
+    if (v.trim().length > 100) throw bad('INVALID_REQUEST_BODY', 'reference_id must be at most 100 characters');
+    return v.trim();
+  }
+  function paging(q) {
+    const p = q.page ?? 1, l = q.limit ?? 10;
+    if (!Number.isInteger(p) || p < 1) throw bad('INVALID_PAGINATION', 'page must be at least 1');
+    if (!Number.isInteger(l) || l < 1 || l > 100) throw bad('INVALID_PAGINATION', 'limit must be between 1 and 100');
+    return { p, l };
+  }
+  const outAcct = (a) => ({ id: a.id, name: a.name, balance: a.balance / 100, created_at: a.created_at });
+  const outTx = (t) => ({ id: t.id, account_id: t.account_id, type: t.type, amount: t.amount / 100, description: t.description, reference_id: t.reference_id, transfer_id: t.transfer_id, created_at: t.created_at });
+  const outXfer = (t) => ({ ...t, amount: t.amount / 100 });
+  const meta = (p, l, n) => ({ current_page: p, page_size: l, total_records: n, total_pages: Math.ceil(n / l) });
+  const newestFirst = (a, b) => (b.created_at > a.created_at ? 1 : b.created_at < a.created_at ? -1 : b.seq - a.seq);
 
-    async function call(method, path, body) {
-      const started = performance.now();
-      let res, data;
-      try {
-        res = await fetch(base() + path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
-        data = await res.json().catch(() => null);
-      } catch (e) {
-        $('log').textContent = `${method} ${path}\nNetwork error: ${e.message}\n(Is the API running? Is the API URL above correct?)`;
-        throw e;
+  return {
+    load,
+    reset: seed,
+    listAccounts(q = {}) {
+      const { p, l } = paging(q);
+      const all = [...db.accounts].sort((a, b) => (b.created_at > a.created_at ? 1 : -1));
+      return { data: all.slice((p - 1) * l, p * l).map(outAcct), pagination: meta(p, l, all.length) };
+    },
+    createAccount(body) {
+      const name = typeof body.name === 'string' ? body.name.trim() : '';
+      if (!name) throw bad('INVALID_REQUEST_BODY', 'name is required');
+      if (name.length > 200) throw bad('INVALID_REQUEST_BODY', 'name must be at most 200 characters');
+      const a = acct(name, new Date().toISOString()); save(); return outAcct(a);
+    },
+    balance(id) { const a = find(id); return { account_id: a.id, balance: a.balance / 100, currency: 'INR' }; },
+    addTransaction(id, body) {
+      const a = find(id);
+      if (body.type !== 'credit' && body.type !== 'debit') throw bad('INVALID_TRANSACTION_TYPE', "type must be either 'credit' or 'debit'");
+      const paise = checkAmount(body.amount), ref = checkRef(body.reference_id);
+      // Duplicate check first, then balance: same order as the server.
+      const dup = db.transactions.find((t) => t.account_id === id && t.reference_id === ref);
+      if (dup) throw new ApiError(409, 'DUPLICATE_TRANSACTION', `A transaction with reference_id "${ref}" already exists for this account`, { transaction: outTx(dup) });
+      if (body.type === 'debit' && a.balance < paise) throw insufficient(a, body.amount);
+      const t = tx(a, body.type, paise, body.description?.trim() || null, ref); save();
+      return { ...outTx(t), account_balance: a.balance / 100 };
+    },
+    history(id, q = {}) {
+      find(id);
+      if (q.type && q.type !== 'credit' && q.type !== 'debit') throw bad('INVALID_TRANSACTION_TYPE', "type must be either 'credit' or 'debit'");
+      const { p, l } = paging(q);
+      const rows = db.transactions.filter((t) => t.account_id === id && (!q.type || t.type === q.type)).sort(newestFirst);
+      return { data: rows.slice((p - 1) * l, p * l).map(outTx), pagination: meta(p, l, rows.length) };
+    },
+    transfer(body) {
+      checkId(body.from_account_id); checkId(body.to_account_id);
+      const paise = checkAmount(body.amount);
+      if (body.from_account_id === body.to_account_id) throw bad('SAME_ACCOUNT_TRANSFER', 'from_account_id and to_account_id must be different accounts');
+      const from = find(body.from_account_id), to = find(body.to_account_id);
+      const ref = body.reference_id ? checkRef(body.reference_id) : uuid();
+      const dup = db.transfers.find((t) => t.from_account_id === from.id && t.reference_id === ref);
+      if (dup) throw new ApiError(409, 'DUPLICATE_TRANSFER', `A transfer with reference_id "${ref}" already exists for this source account`, { transfer: outXfer(dup) });
+      if (from.balance < paise) throw insufficient(from, body.amount);
+      const leg = `transfer:${ref}`;
+      if (db.transactions.some((t) => (t.account_id === from.id || t.account_id === to.id) && t.reference_id === leg)) {
+        throw new ApiError(409, 'DUPLICATE_TRANSACTION', 'A transaction with this reference_id already exists for this account');
       }
-      $('log').textContent = `${method} ${path}  →  ${res.status}  (${Math.round(performance.now() - started)} ms)\n` +
-        (body ? `request: ${JSON.stringify(body)}\n` : '') + JSON.stringify(data, null, 2);
-      if (!res.ok) throw Object.assign(new Error(data?.error?.message || res.statusText), { data });
-      return data;
+      const t = xfer(from, to, paise, body.description?.trim() || null, ref, new Date().toISOString()); save();
+      const legs = db.transactions.filter((x) => x.transfer_id === t.id);
+      return {
+        transfer: outXfer(t),
+        debit_transaction: outTx(legs.find((x) => x.type === 'debit')),
+        credit_transaction: outTx(legs.find((x) => x.type === 'credit')),
+        from_account: { id: from.id, balance: from.balance / 100 },
+        to_account: { id: to.id, balance: to.balance / 100 },
+      };
+    },
+  };
+})();
+
+/* =====================================================================
+   Backend: one interface, two implementations.
+   ===================================================================== */
+const qs = (o = {}) => { const s = new URLSearchParams(Object.entries(o).filter(([, v]) => v != null && v !== '')).toString(); return s ? '?' + s : ''; };
+
+function makeLive(base) {
+  async function call(method, path, body) {
+    let res, data;
+    try {
+      res = await fetch(base + path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+      data = await res.json().catch(() => null);
+    } catch (e) {
+      lastCall.text = `${method} ${path}\n\nNetwork error: ${e.message}`;
+      throw new ApiError(0, 'NETWORK', 'Could not reach the server');
     }
-
-    function showError(form, err) {
-      form.querySelector('.error')?.remove();
-      if (!err) return;
-      const div = document.createElement('div');
-      div.className = 'error';
-      div.textContent = (err.data?.error?.code ? err.data.error.code + ': ' : '') + err.message;
-      form.appendChild(div);
+    logCall(method, path, body, res.status, data);
+    if (!res.ok) throw new ApiError(res.status, data?.error?.code || 'HTTP_' + res.status, data?.error?.message || res.statusText, data?.error?.details);
+    return data;
+  }
+  return {
+    listAccounts: (q) => call('GET', '/accounts' + qs(q)),
+    createAccount: (body) => call('POST', '/accounts', body),
+    balance: (id) => call('GET', `/accounts/${id}/balance`),
+    addTransaction: (id, body) => call('POST', `/accounts/${id}/transactions`, body),
+    history: (id, q) => call('GET', `/accounts/${id}/transactions` + qs(q)),
+    transfer: (body) => call('POST', '/transfers', body),
+  };
+}
+function makeDemo() {
+  DemoLedger.load();
+  // Wraps a DemoLedger method so it behaves like a network call and fills the call log.
+  const wrap = (method, pathOf, fn) => async (...args) => {
+    await new Promise((r) => setTimeout(r, 200));
+    const path = pathOf(...args), body = method === 'POST' ? args[args.length - 1] : undefined;
+    try {
+      const data = fn(...args); logCall(method, path, body, method === 'POST' ? 201 : 200, data); return data;
+    } catch (e) {
+      if (e instanceof ApiError) logCall(method, path, body, e.status, { error: { code: e.code, message: e.message, ...(e.details && { details: e.details }) } });
+      throw e;
     }
+  };
+  return {
+    listAccounts: wrap('GET', (q) => '/accounts' + qs(q), (q) => DemoLedger.listAccounts(q)),
+    createAccount: wrap('POST', () => '/accounts', (b) => DemoLedger.createAccount(b)),
+    balance: wrap('GET', (id) => `/accounts/${id}/balance`, (id) => DemoLedger.balance(id)),
+    addTransaction: wrap('POST', (id) => `/accounts/${id}/transactions`, (id, b) => DemoLedger.addTransaction(id, b)),
+    history: wrap('GET', (id, q) => `/accounts/${id}/transactions` + qs(q), (id, q) => DemoLedger.history(id, q)),
+    transfer: wrap('POST', () => '/transfers', (b) => DemoLedger.transfer(b)),
+  };
+}
 
-    async function loadAccounts() {
-      try {
-        accounts = (await call('GET', '/accounts?limit=100')).data;
-      } catch { $('accounts').innerHTML = '<li class="muted">Could not load accounts.</li>'; return; }
-      $('accounts').innerHTML = accounts.length ? accounts.map((a) =>
-        `<li data-id="${a.id}" class="${a.id === selected ? 'active' : ''}"><span>${esc(a.name)}</span><span class="muted">${inr(a.balance)}</span></li>`
-      ).join('') : '<li class="muted">No accounts yet.</li>';
-      $('trTo').innerHTML = accounts.filter((a) => a.id !== selected)
-        .map((a) => `<option value="${a.id}">${esc(a.name)} (${a.id.slice(0, 8)})</option>`).join('');
+/* =====================================================================
+   App state + screens
+   ===================================================================== */
+const S = {
+  api: null, mode: 'demo', base: '',
+  accounts: [], currentId: store.get('paisa-current'), balance: 0,
+  view: 'home', recent: [], hide: store.get('paisa-hide') === '1',
+  hist: { type: '', page: 1, data: [] },
+};
+const current = () => S.accounts.find((a) => a.id === S.currentId);
+const nameOf = (id) => S.accounts.find((a) => a.id === id)?.name;
+
+function describeTx(t) {
+  const m = /^Transfer (to|from) ([0-9a-f-]{36})$/i.exec(t.description || '');
+  if (m) return { title: (m[1] === 'to' ? 'Sent to ' : 'Received from ') + (nameOf(m[2]) || shortId(m[2])), sub: 'Account transfer' };
+  if (t.transfer_id) return { title: t.description, sub: t.type === 'debit' ? 'Sent · transfer' : 'Received · transfer' };
+  if (t.description) return { title: t.description, sub: t.type === 'credit' ? 'Money added' : 'Paid' };
+  return { title: t.type === 'credit' ? 'Money added' : 'Payment', sub: t.reference_id };
+}
+const txIcon = (t) => (t.transfer_id ? ICON.swap : t.type === 'credit' ? ICON.down : ICON.up);
+function txRow(t) {
+  const d = describeTx(t);
+  return `<li><button class="tx" data-tx="${t.id}">
+    <span class="tx-ico ${t.type}">${txIcon(t)}</span>
+    <span class="tx-main"><span class="tx-title">${esc(d.title)}</span><span class="tx-sub">${esc(d.sub)} · ${timeOf(t.created_at)}</span></span>
+    <span class="tx-amt num ${t.type}">${t.type === 'credit' ? '+' : '−'}${rupees(t.amount)}<span class="kind">${t.type === 'credit' ? 'Credit' : 'Debit'}</span></span>
+  </button></li>`;
+}
+function groupedList(rows) {
+  let out = '', last = '';
+  for (const t of rows) {
+    const day = dayLabel(t.created_at);
+    if (day !== last) { if (last) out += '</ul>'; out += `<div class="day">${day}</div><ul class="tx-list">`; last = day; }
+    out += txRow(t);
+  }
+  return out + (last ? '</ul>' : '');
+}
+
+async function refreshAccounts() {
+  S.accounts = (await S.api.listAccounts({ limit: 100 })).data;
+  if (!current()) S.currentId = S.accounts.find((a) => a.name === 'Aman Singh')?.id ?? S.accounts[0]?.id ?? null;
+  store.set('paisa-current', S.currentId || '');
+  const a = current();
+  $('#whoName').textContent = a ? a.name : 'No account yet';
+  $('#whoAvatar').textContent = a ? initials(a.name) : '+';
+}
+
+function render() {
+  document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-current', t.dataset.view === S.view ? 'page' : 'false'));
+  return ({ home: renderHome, history: renderHistory, accounts: renderAccounts, dev: renderDev })[S.view]();
+}
+
+async function renderHome() {
+  const a = current(), view = $('#view');
+  if (!a) {
+    view.innerHTML = `<section class="card empty"><strong>Create your first account</strong>
+      <span>An account holds a balance. You can add money, pay, and send to other accounts.</span>
+      <button class="btn" style="max-width:260px" data-act="new">Create account</button></section>`;
+    return;
+  }
+  const [bal, hist] = await Promise.all([S.api.balance(a.id), S.api.history(a.id, { limit: 5 })]);
+  S.balance = bal.balance; S.recent = hist.data;
+  view.innerHTML = `
+    <section class="card balance">
+      <div class="balance-row"><span class="label">Wallet balance</span>
+        <button class="icon-btn" id="hideBtn" aria-label="${S.hide ? 'Show' : 'Hide'} balance">${S.hide ? ICON.eyeOff : ICON.eye}</button></div>
+      <div class="amount-xl num">${S.hide ? '₹ ••••' : rupees(bal.balance)}</div>
+      <button class="acct-id" id="copyId" title="Copy account ID">ID ${shortId(a.id)} ${ICON.copy}</button>
+    </section>
+
+    <section class="card actions">
+      <h2>Money transfers</h2>
+      <div class="action-grid">
+        <button class="action" data-act="credit"><span class="tile">${ICON.wallet}</span>Add money</button>
+        <button class="action" data-act="debit"><span class="tile">${ICON.bag}</span>Pay or spend</button>
+        <button class="action" data-act="transfer"><span class="tile">${ICON.send}</span>Send to account</button>
+        <button class="action" data-act="new"><span class="tile">${ICON.user}</span>New account</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head"><h2>Recent activity</h2>${hist.pagination.total_records > hist.data.length ? `<button class="link" data-goto="history">See all ${hist.pagination.total_records}</button>` : ''}</div>
+      ${hist.data.length ? groupedList(hist.data) : `<div class="empty"><strong>No transactions yet</strong><span>Tap Add money to get started.</span></div>`}
+    </section>`;
+  $('#hideBtn').onclick = () => { S.hide = !S.hide; store.set('paisa-hide', S.hide ? '1' : '0'); renderHome(); };
+  $('#copyId').onclick = () => copy(a.id, 'Account ID copied');
+}
+
+async function renderHistory() {
+  const a = current(), view = $('#view');
+  if (!a) { S.view = 'home'; return render(); }
+  const res = await S.api.history(a.id, { type: S.hist.type || undefined, page: S.hist.page, limit: 10 });
+  S.hist.data = res.data;
+  const p = res.pagination;
+  const chip = (val, label) => `<button class="chip" data-filter="${val}" aria-pressed="${S.hist.type === val}">${label}</button>`;
+  view.innerHTML = `
+    <h1 class="page-title">History</h1>
+    <div class="chips">${chip('', 'All')}${chip('credit', 'Money in')}${chip('debit', 'Money out')}</div>
+    <section class="card">
+      ${res.data.length ? groupedList(res.data) : `<div class="empty"><strong>Nothing here</strong><span>${S.hist.type ? 'No transactions of this type.' : 'No transactions yet.'}</span></div>`}
+      <div class="pager"><span class="num">Page ${p.current_page} of ${Math.max(p.total_pages, 1)} · ${p.total_records} total</span>
+        <div><button class="btn-ghost" id="prevPg" ${p.current_page <= 1 ? 'disabled' : ''}>Previous</button>
+        <button class="btn-ghost" id="nextPg" ${p.current_page >= p.total_pages ? 'disabled' : ''}>Next</button></div></div>
+    </section>`;
+  view.querySelectorAll('[data-filter]').forEach((b) => (b.onclick = () => { S.hist.type = b.dataset.filter; S.hist.page = 1; renderHistory(); }));
+  $('#prevPg').onclick = () => { S.hist.page--; renderHistory(); };
+  $('#nextPg').onclick = () => { S.hist.page++; renderHistory(); };
+}
+
+function accountRows() {
+  if (!S.accounts.length) return `<div class="empty"><strong>No accounts yet</strong></div>`;
+  return S.accounts.map((a) => `<button class="row-btn" data-acct="${a.id}">
+    <span class="avatar sm">${esc(initials(a.name))}</span>
+    <span class="row-main"><span class="row-title">${esc(a.name)}</span><span class="row-sub num">${rupees(a.balance)} · ${shortId(a.id)}</span></span>
+    ${a.id === S.currentId ? `<span class="tick" aria-label="Selected">${ICON.tick}</span>` : ''}</button>`).join('');
+}
+function renderAccounts() {
+  $('#view').innerHTML = `
+    <h1 class="page-title">Accounts</h1>
+    <p class="small" style="margin-top:-8px">Tap an account to use it. Each one has its own balance and history.</p>
+    <section class="card">${accountRows()}</section>
+    <button class="btn" data-act="new">Create new account</button>`;
+}
+
+function renderDev() {
+  const live = S.mode === 'live';
+  $('#view').innerHTML = `
+    <h1 class="page-title">Developer</h1>
+    <section class="card settings">
+      <span class="row-title">Connection</span>
+      <p>${live
+        ? `Connected to the live API at <strong>${esc(S.base || location.origin)}</strong>.`
+        : 'Demo mode. The ledger rules run inside this page, with the same validation, error codes and JSON as the real API. Nothing is sent to a server.'}</p>
+      <div class="field"><label for="apiUrl">API URL</label>
+        <input class="input" id="apiUrl" placeholder="https://your-api.onrender.com" value="${esc(store.get('paisa-api') || '')}" inputmode="url" autocomplete="off"></div>
+      <div class="btn-row">
+        <button class="btn" id="connectBtn">Connect to API</button>
+        <button class="btn secondary" id="demoBtn">Use demo mode</button>
+      </div>
+      <p class="small" id="connectMsg"></p>
+    </section>
+    <section class="card settings">
+      <span class="row-title">Last API call</span>
+      <p>The request and response behind your last action, to check status codes and error format.</p>
+      <pre class="log">${esc(lastCall.text)}</pre>
+    </section>
+    ${live ? '' : `<section class="card settings"><span class="row-title">Demo data</span>
+      <p>Put back the sample accounts and transactions.</p><button class="btn secondary" id="resetBtn2">Reset demo data</button></section>`}`;
+  $('#connectBtn').onclick = async () => {
+    const url = $('#apiUrl').value.trim().replace(/\/$/, '');
+    $('#connectMsg').textContent = 'Checking…';
+    if (await tryConnect(url)) { store.set('paisa-api', url); store.set('paisa-mode', 'live'); await boot(); toast('Connected to the live API'); }
+    else $('#connectMsg').textContent = `Couldn't reach ${url || 'this site'}/health. Check the URL and that the API is running. A free Render service can take a minute to wake up.`;
+  };
+  $('#demoBtn').onclick = async () => { store.set('paisa-mode', 'demo'); await boot(); toast('Switched to demo mode'); };
+  const r = $('#resetBtn2'); if (r) r.onclick = resetDemo;
+}
+
+/* =====================================================================
+   Sheets (bottom drawers)
+   ===================================================================== */
+function openSheet(html) {
+  closeSheet();
+  const scrim = document.createElement('div');
+  scrim.className = 'scrim'; scrim.id = 'scrim';
+  scrim.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><div class="grabber"></div>${html}</div>`;
+  scrim.addEventListener('click', (e) => { if (e.target === scrim || e.target.closest('[data-close]')) closeSheet(); });
+  document.body.appendChild(scrim);
+  return scrim.querySelector('.sheet');
+}
+function closeSheet() { $('#scrim')?.remove(); }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+const sheetHead = (title) => `<div class="sheet-head"><h3>${title}</h3><button class="icon-btn" data-close aria-label="Close">${ICON.close}</button></div>`;
+const fromLine = (a, word) => `<div class="from-to"><span class="avatar sm">${esc(initials(a.name))}</span><span>${word} <strong>${esc(a.name)}</strong> · balance ${rupees(S.balance)}</span></div>`;
+
+function amountBlock() {
+  return `<div class="amount-box"><span>₹</span><input id="amt" inputmode="decimal" placeholder="0" autocomplete="off" aria-label="Amount in rupees"></div>
+    <div class="quick">${[100, 500, 1000, 5000].map((v) => `<button class="chip" type="button" data-quick="${v}">+${rupees(v)}</button>`).join('')}</div>
+    <div class="hint" id="amtHint"></div>`;
+}
+function refBlock(prefix) {
+  return `<div class="field"><label for="ref">Reference ID</label>
+    <div class="ref-row"><input class="input" id="ref" value="${newRef(prefix)}" autocomplete="off"><button class="btn-ghost" type="button" id="newRefBtn">New</button></div>
+    <p class="small">Each payment needs its own reference. Reusing one is treated as a duplicate and won't charge twice.</p></div>`;
+}
+// Amount field: validates as you type and, when spending, shows the balance left.
+function wireAmount(sheet, { max, onChange }) {
+  const amt = $('#amt', sheet), hint = $('#amtHint', sheet);
+  const parse = () => {
+    const raw = amt.value.replace(/,/g, '').trim();
+    if (!raw) return { ok: false, msg: '' };
+    if (!/^\d+(\.\d{0,2})?$/.test(raw)) return { ok: false, msg: 'Enter a number with up to 2 decimals' };
+    const v = Number(raw);
+    if (v <= 0) return { ok: false, msg: 'Amount must be more than ₹0' };
+    if (v > 1e9) return { ok: false, msg: 'The most you can move at once is ₹1,00,00,00,000' };
+    return { ok: true, value: v };
+  };
+  const update = () => {
+    const r = parse();
+    let msg = r.msg, over = !!r.msg;
+    if (r.ok && max != null) {
+      over = r.value > max;
+      msg = over ? `More than your balance of ${rupees(max)}. Try it to see the server decline it.` : `Balance after: ${rupees(Math.round((max - r.value) * 100) / 100)}`;
     }
+    hint.textContent = msg; hint.className = 'hint' + (over ? ' bad' : '');
+    onChange(r);
+  };
+  amt.addEventListener('input', update);
+  sheet.querySelectorAll('[data-quick]').forEach((b) => (b.onclick = () => {
+    const cur = Number(amt.value.replace(/,/g, '')) || 0;
+    amt.value = String(Math.round((cur + Number(b.dataset.quick)) * 100) / 100); update(); amt.focus();
+  }));
+  $('#newRefBtn', sheet).onclick = () => { const r = $('#ref', sheet); r.value = newRef(r.value.split('-')[0] || 'REF'); };
+  setTimeout(() => amt.focus(), 250);
+}
+function busy(btn, on, label) { btn.disabled = on; btn.innerHTML = on ? '<span class="spinner"></span>' : esc(label); }
 
-    async function loadDetail() {
-      if (!selected) return;
-      const [acc, bal] = [accounts.find((a) => a.id === selected), await call('GET', `/accounts/${selected}/balance`)];
-      $('detail').innerHTML = `<h2>${esc(acc?.name ?? 'Account')}</h2><div class="balance">${inr(bal.balance)}</div><div class="muted">ID: ${selected}</div>`;
-      const type = $('filterType').value;
-      const h = await call('GET', `/accounts/${selected}/transactions?page=${page}&limit=10${type ? '&type=' + type : ''}`);
-      $('history').innerHTML = h.data.length ? h.data.map((t) => `<tr>
-          <td class="muted when">${new Date(t.created_at).toLocaleString()}</td>
-          <td class="${t.type}">${t.type}</td><td>${esc(t.reference_id)}</td><td>${esc(t.description)}</td>
-          <td class="amount ${t.type}">${t.type === 'debit' ? '−' : '+'}${inr(t.amount)}</td></tr>`).join('')
-        : '<tr><td colspan="5" class="muted">No transactions.</td></tr>';
-      const p = h.pagination;
-      $('pageInfo').textContent = `Page ${p.current_page} of ${Math.max(p.total_pages, 1)} · ${p.total_records} records`;
-      $('prev').disabled = p.current_page <= 1;
-      $('next').disabled = p.current_page >= p.total_pages;
-    }
+// ---- Add money / pay ----
+function moneySheet(kind) {
+  const a = current(); if (!a) return newAccountSheet();
+  const credit = kind === 'credit';
+  const sheet = openSheet(`${sheetHead(credit ? 'Add money' : 'Pay or spend')}
+    <form class="stack" id="moneyForm" novalidate>
+      ${fromLine(a, credit ? 'Into' : 'From')}
+      ${amountBlock()}
+      <div class="field"><label for="note">${credit ? 'Source' : 'Paid for'}</label>
+        <input class="input" id="note" placeholder="${credit ? 'e.g. Salary, Refund' : 'e.g. Groceries, Rent'}" maxlength="500" autocomplete="off"></div>
+      ${refBlock(credit ? 'ADD' : 'PAY')}
+      <button class="btn" id="go" disabled>${credit ? 'Add money' : 'Pay'}</button>
+    </form>`);
+  const go = $('#go', sheet);
+  let amount = null;
+  const label = () => (amount ? `${credit ? 'Add' : 'Pay'} ${rupees(amount)}` : credit ? 'Add money' : 'Pay');
+  wireAmount(sheet, { max: credit ? null : S.balance, onChange: (r) => { amount = r.ok ? r.value : null; go.disabled = !r.ok; go.textContent = label(); } });
+  $('#moneyForm', sheet).onsubmit = (e) => {
+    e.preventDefault(); if (!amount) return;
+    busy(go, true);
+    submitTx(a, { type: kind, amount, reference_id: $('#ref', sheet).value.trim(), description: $('#note', sheet).value.trim() || undefined },
+      () => busy(go, false, label()));
+  };
+}
+async function submitTx(a, body, restore) {
+  try {
+    const res = await S.api.addTransaction(a.id, body);
+    resultSheet({ title: body.type === 'credit' ? 'Money added' : 'Payment successful', amount: body.amount,
+      lines: [`New balance ${rupees(res.account_balance)}`], tx: res, repeat: () => submitTx(a, body) });
+  } catch (err) { restore?.(); failSheet(err); }
+  await refreshAll();
+}
 
-    async function refresh() { await loadAccounts(); await loadDetail(); }
+// ---- Transfer ----
+function transferSheet() {
+  const a = current(); if (!a) return newAccountSheet();
+  const others = S.accounts.filter((x) => x.id !== a.id);
+  if (!others.length) {
+    const s = openSheet(`${sheetHead('Send to account')}<div class="empty"><strong>No one to send to yet</strong>
+      <span>Create a second account first, then send money to it.</span><button class="btn" id="mk">Create account</button></div>`);
+    $('#mk', s).onclick = newAccountSheet;
+    return;
+  }
+  let to = null, amount = null;
+  const sheet = openSheet(`${sheetHead('Send to account')}
+    <form class="stack" id="xForm" novalidate>
+      <div class="field"><span class="label">To</span>
+        <div class="payees">${others.map((o) => `<button type="button" class="payee" data-to="${o.id}" aria-pressed="false"><span class="avatar">${esc(initials(o.name))}</span><span>${esc(o.name)}</span></button>`).join('')}</div></div>
+      ${fromLine(a, 'From')}
+      ${amountBlock()}
+      <div class="field"><label for="note">Message</label><input class="input" id="note" placeholder="e.g. Dinner split" maxlength="500" autocomplete="off"></div>
+      ${refBlock('TRF')}
+      <button class="btn" id="go" disabled>Choose who to pay</button>
+    </form>`);
+  const go = $('#go', sheet);
+  const label = () => (!to ? 'Choose who to pay' : !amount ? `Send to ${nameOf(to)}` : `Send ${rupees(amount)} to ${nameOf(to)}`);
+  const sync = () => { go.disabled = !(to && amount); go.textContent = label(); };
+  sheet.querySelectorAll('[data-to]').forEach((b) => (b.onclick = () => {
+    to = b.dataset.to; sheet.querySelectorAll('[data-to]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); sync();
+  }));
+  wireAmount(sheet, { max: S.balance, onChange: (r) => { amount = r.ok ? r.value : null; sync(); } });
+  $('#xForm', sheet).onsubmit = (e) => {
+    e.preventDefault(); if (!to || !amount) return;
+    busy(go, true);
+    submitTransfer({ from_account_id: a.id, to_account_id: to, amount, reference_id: $('#ref', sheet).value.trim() || undefined,
+      description: $('#note', sheet).value.trim() || undefined }, () => busy(go, false, label()));
+  };
+}
+async function submitTransfer(body, restore) {
+  try {
+    const res = await S.api.transfer(body);
+    const who = nameOf(body.to_account_id);
+    resultSheet({ title: `Sent to ${who}`, amount: body.amount,
+      lines: [`Your balance ${rupees(res.from_account.balance)}`, `${who}'s balance ${rupees(res.to_account.balance)}`],
+      tx: res.debit_transaction, repeat: () => submitTransfer(body) });
+  } catch (err) { restore?.(); failSheet(err); }
+  await refreshAll();
+}
 
-    $('accounts').addEventListener('click', (e) => {
-      const li = e.target.closest('li[data-id]');
-      if (!li) return;
-      selected = li.dataset.id; page = 1; refresh();
-    });
+// ---- New account / switch ----
+function newAccountSheet() {
+  const sheet = openSheet(`${sheetHead('New account')}
+    <form class="stack" id="accForm" novalidate>
+      <div class="field"><label for="accName">Account holder name</label>
+        <input class="input" id="accName" placeholder="e.g. Rahul Verma" maxlength="200" autocomplete="off"></div>
+      <p class="small">New accounts always start at ₹0.</p>
+      <button class="btn" id="go" disabled>Create account</button>
+    </form>`);
+  const input = $('#accName', sheet), go = $('#go', sheet);
+  input.oninput = () => { go.disabled = !input.value.trim(); };
+  setTimeout(() => input.focus(), 250);
+  $('#accForm', sheet).onsubmit = async (e) => {
+    e.preventDefault(); if (!input.value.trim()) return;
+    busy(go, true);
+    try {
+      const acc = await S.api.createAccount({ name: input.value });
+      closeSheet(); S.currentId = acc.id; S.view = 'home'; await refreshAll(); toast(`${acc.name}'s account created`);
+    } catch (err) { busy(go, false, 'Create account'); failSheet(err); }
+  };
+}
+function switchSheet() {
+  const sheet = openSheet(`${sheetHead('Choose account')}<div class="card" style="box-shadow:none;border:1px solid var(--line)">${accountRows()}</div>
+    <div class="gap"></div><button class="btn secondary" data-act="new">Create new account</button>`);
+}
+async function switchTo(id) { closeSheet(); S.currentId = id; S.hist.page = 1; await refreshAll(); toast(`Using ${nameOf(id)}'s account`); }
 
-    $('accountForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      try {
-        const acc = await call('POST', '/accounts', { name: $('accName').value });
-        $('accName').value = ''; selected = acc.id; page = 1; showError(e.target); await refresh();
-      } catch (err) { showError(e.target, err); }
-    });
+// ---- Results ----
+function resultSheet({ title, amount, lines = [], tx, repeat }) {
+  const sheet = openSheet(`
+    <div class="result">
+      <div class="badge ok">${ICON.check}</div>
+      <h3>${esc(title)}</h3>
+      <div class="amount-xl num">${rupees(amount)}</div>
+      ${lines.map((l) => `<p class="num">${esc(l)}</p>`).join('')}
+    </div>
+    <div class="gap"></div>
+    <dl class="detail">
+      <div><dt>Reference</dt><dd class="mono">${esc(tx.reference_id)}</dd></div>
+      <div><dt>Transaction ID</dt><dd class="mono">${esc(tx.id)}</dd></div>
+      <div><dt>Time</dt><dd>${fullDate(tx.created_at)}</dd></div>
+    </dl>
+    <div class="gap"></div>
+    <div class="stack">
+      <button class="btn" data-close>Done</button>
+      <button class="btn secondary" id="repeat">Send the same request again</button>
+      <p class="small" style="text-align:center">Tests duplicate protection. It should be refused, and the balance should stay the same.</p>
+    </div>`);
+  const r = $('#repeat', sheet);
+  r.onclick = () => { busy(r, true); repeat(); };
+}
+function failSheet(err) {
+  const d = err.details || {};
+  const map = {
+    INSUFFICIENT_BALANCE: { tone: 'fail', title: 'Not enough balance', text: `You have ${rupees(d.balance ?? 0)}, but this needs ${rupees(d.requested ?? 0)}. Nothing was deducted.` },
+    DUPLICATE_TRANSACTION: { tone: 'warn', title: 'Already processed', text: d.transaction
+      ? `A ${d.transaction.type} of ${rupees(d.transaction.amount)} with reference ${d.transaction.reference_id} was already made on ${fullDate(d.transaction.created_at)}. It wasn't applied again.`
+      : 'This reference ID was already used on this account. Nothing was applied again.' },
+    DUPLICATE_TRANSFER: { tone: 'warn', title: 'Already sent', text: d.transfer
+      ? `This transfer of ${rupees(d.transfer.amount)} (reference ${d.transfer.reference_id}) was already sent on ${fullDate(d.transfer.created_at)}. No money moved this time.`
+      : 'A transfer with this reference was already sent. No money moved.' },
+    ACCOUNT_NOT_FOUND: { tone: 'fail', title: 'Account not found', text: 'That account no longer exists. Pick another one.' },
+    NETWORK: { tone: 'fail', title: "Can't reach the server", text: 'Check your connection. A free Render server can take about a minute to wake up, so try again shortly.' },
+  };
+  const m = map[err.code] || { tone: 'fail', title: "That didn't go through", text: err.message };
+  openSheet(`<div class="result">
+      <div class="badge ${m.tone}">${m.tone === 'warn' ? ICON.repeat : ICON.cross}</div>
+      <h3>${esc(m.title)}</h3><p>${esc(m.text)}</p>
+      ${err.status ? `<span class="code-tag">${err.status} · ${esc(err.code)}</span>` : ''}
+    </div><div class="gap"></div><button class="btn" data-close>OK</button>`);
+}
+function txSheet(id) {
+  const t = [...S.recent, ...S.hist.data].find((x) => x.id === id); if (!t) return;
+  const d = describeTx(t);
+  openSheet(`${sheetHead('Transaction details')}
+    <div class="result" style="padding-top:0">
+      <div class="tx-ico ${t.type}" style="width:56px;height:56px">${txIcon(t)}</div>
+      <h3>${esc(d.title)}</h3>
+      <div class="amount-xl num" style="color:${t.type === 'credit' ? 'var(--credit)' : 'var(--fg)'}">${t.type === 'credit' ? '+' : '−'}${rupees(t.amount)}</div>
+    </div><div class="gap"></div>
+    <dl class="detail">
+      <div><dt>Type</dt><dd>${t.type}</dd></div>
+      <div><dt>Description</dt><dd>${esc(t.description || '—')}</dd></div>
+      <div><dt>Reference ID</dt><dd class="mono">${esc(t.reference_id)}</dd></div>
+      <div><dt>Transaction ID</dt><dd class="mono">${esc(t.id)}</dd></div>
+      ${t.transfer_id ? `<div><dt>Transfer ID</dt><dd class="mono">${esc(t.transfer_id)}</dd></div>` : ''}
+      <div><dt>Account</dt><dd class="mono">${esc(t.account_id)}</dd></div>
+      <div><dt>Created</dt><dd>${fullDate(t.created_at)}</dd></div>
+    </dl>
+    <p class="notice">Transactions are permanent. They can't be edited or deleted. To undo one, post the opposite transaction.</p>`);
+}
 
-    $('txForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!selected) return showError(e.target, new Error('Pick an account first'));
-      try {
-        await call('POST', `/accounts/${selected}/transactions`, {
-          type: $('txType').value, amount: Number($('txAmount').value),
-          reference_id: $('txRef').value, description: $('txDesc').value || undefined,
-        });
-        showError(e.target); $('txRef').value = newRef(); page = 1;
-        await refresh();
-      } catch (err) { showError(e.target, err); } // keep the error response visible in the log
-    });
+// ---------- misc ----------
+function toast(msg) {
+  $('.toast')?.remove();
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2200);
+}
+async function copy(text, msg) {
+  try { await navigator.clipboard.writeText(text); toast(msg); } catch { toast(text); }
+}
+async function refreshAll() {
+  try { await refreshAccounts(); await render(); }
+  catch (err) { failSheet(err); }
+}
+async function resetDemo() {
+  DemoLedger.reset(); S.currentId = null; S.view = 'home'; S.hist = { type: '', page: 1, data: [] };
+  await refreshAll(); toast('Sample data restored');
+}
 
-    $('trForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!selected) return showError(e.target, new Error('Pick the source account first'));
-      try {
-        await call('POST', '/transfers', {
-          from_account_id: selected, to_account_id: $('trTo').value,
-          amount: Number($('trAmount').value), reference_id: $('trRef').value || undefined,
-        });
-        showError(e.target); $('trRef').value = '';
-        await refresh();
-      } catch (err) { showError(e.target, err); }
-    });
+// One click handler for buttons rendered from templates.
+document.addEventListener('click', (e) => {
+  const el = (attr) => e.target.closest(`[${attr}]`);
+  if (el('data-act')) {
+    const act = el('data-act').dataset.act;
+    return ({ credit: () => moneySheet('credit'), debit: () => moneySheet('debit'), transfer: transferSheet, new: newAccountSheet })[act]();
+  }
+  if (el('data-acct')) return switchTo(el('data-acct').dataset.acct);
+  if (el('data-goto')) { S.view = el('data-goto').dataset.goto; S.hist.page = 1; window.scrollTo(0, 0); return render(); }
+  if (el('data-tx')) return txSheet(el('data-tx').dataset.tx);
+});
+document.querySelectorAll('.tab').forEach((t) => (t.onclick = () => {
+  S.view = t.dataset.view; if (S.view === 'history') S.hist.page = 1; window.scrollTo(0, 0); render();
+}));
+$('#whoBtn').onclick = switchSheet;
+$('#modePill').onclick = () => { S.view = 'dev'; render(); };
+$('#resetDemo').onclick = resetDemo;
 
-    $('filterType').addEventListener('change', () => { page = 1; loadDetail(); });
-    $('prev').addEventListener('click', () => { page--; loadDetail(); });
-    $('next').addEventListener('click', () => { page++; loadDetail(); });
-
-    loadAccounts();
-  </script>
+/* =====================================================================
+   Boot: use the live API if it answers /health, otherwise demo mode.
+   ===================================================================== */
+async function tryConnect(base) {
+  try {
+    const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 4000);
+    const res = await fetch(base + '/health', { signal: ctrl.signal });
+    const data = await res.json();
+    return res.ok && data?.status === 'ok';
+  } catch { return false; }
+}
+async function boot() {
+  const base = (store.get('paisa-api') || window.API_BASE_URL || '').replace(/\/$/, '');
+  const live = store.get('paisa-mode') !== 'demo' && (await tryConnect(base));
+  S.mode = live ? 'live' : 'demo'; S.base = base;
+  S.api = live ? makeLive(base) : makeDemo();
+  if (!live) S.currentId = store.get('paisa-current');
+  $('#modePill').textContent = live ? 'Live' : 'Demo';
+  $('#modePill').classList.toggle('live', live);
+  $('#demoNote').hidden = live;
+  await refreshAll();
+}
+boot();
+</script>
 </body>
 </html>

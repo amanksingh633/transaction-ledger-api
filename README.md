@@ -4,7 +4,10 @@ A backend API for a simple transaction ledger: create accounts, post credits and
 
 **Stack:** Node.js 18+ · TypeScript · Express 5 · PostgreSQL (Supabase in production) · `pg` · zod · Jest + Supertest
 
-It also includes a one-page frontend (`public/index.html`) for trying the API in a browser.
+It also includes **Paisa Wallet** (`public/index.html`), a mobile-style frontend served at `/`:
+- **Live mode:** it uses the real API automatically when `/health` answers.
+- **Demo mode:** otherwise it runs an in-browser copy of the same ledger rules on sample data, with the same validation, error codes and JSON.
+- **Developer tab:** shows the last request and response, and lets you point the page at any API URL.
 
 ---
 
