@@ -35,13 +35,14 @@
     --gutter-l: max(16px, env(safe-area-inset-left, 0px));
     --gutter-r: max(16px, env(safe-area-inset-right, 0px));
     --app-w: 460px;
+    --chart: #7a3fc4;        /* validated vs light surface */
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --brand: #9b6ce0; --brand-strong: #b48cf0; --brand-tint: #2a1f3d; --header-bg: #2c1650; --on-brand: #ffffff;
       --bg: #120d1a; --backdrop: #0b0811; --surface: #1c1527; --fg: #f1ecf8; --muted: #a79cba; --line: #2f2642;
       --credit: #45d08c; --credit-tint: #13301f; --debit: #ff7d86; --debit-tint: #3a1820; --warn: #ffc266; --warn-tint: #3a2a10;
-      --scrim: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+      --scrim: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25); --chart: #9b6ce0;
       color-scheme: dark;
     }
   }
@@ -49,7 +50,7 @@
     --brand: #9b6ce0; --brand-strong: #b48cf0; --brand-tint: #2a1f3d; --header-bg: #2c1650; --on-brand: #ffffff;
     --bg: #120d1a; --backdrop: #0b0811; --surface: #1c1527; --fg: #f1ecf8; --muted: #a79cba; --line: #2f2642;
     --credit: #45d08c; --credit-tint: #13301f; --debit: #ff7d86; --debit-tint: #3a1820; --warn: #ffc266; --warn-tint: #3a2a10;
-    --scrim: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+    --scrim: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25); --chart: #9b6ce0;
     color-scheme: dark;
   }
 
@@ -210,6 +211,63 @@
            background: var(--fg); color: var(--surface); padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 14px; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
   .spinner { width: 18px; height: 18px; border: 2.5px solid var(--brand-tint); border-top-color: var(--on-brand); border-radius: 50%; display: inline-block; animation: spin .7s linear infinite; vertical-align: -3px; }
 
+  /* ---------- insights (stat tiles + 7-day bar chart) ---------- */
+  .insights { padding: 16px; display: grid; gap: 14px; }
+  .insights h2 { margin: 0; font-size: 15px; font-weight: 700; }
+  .stat-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .stat { background: var(--bg); border-radius: 12px; padding: 10px 12px; min-width: 0; display: grid; gap: 2px; }
+  .stat .label { font-size: 12px; }
+  .stat strong { font-size: 17px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chart-title { font-size: 12.5px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+  .bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; align-items: end; height: 96px; border-bottom: 1px solid var(--line); }
+  .bar { position: relative; height: 100%; display: flex; align-items: flex-end; justify-content: center; background: none; border: 0; padding: 0 4px; cursor: default; }
+  .bar-fill { display: block; width: 100%; max-width: 30px; background: var(--chart); border-radius: 4px 4px 0 0; }
+  .bar:hover .bar-fill, .bar:focus-visible .bar-fill { opacity: .8; }
+  .bar-labels { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; font-size: 11px; color: var(--muted); text-align: center; margin-top: 4px; }
+  .tip { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--fg); color: var(--surface); font-size: 12px; font-weight: 600;
+         padding: 4px 8px; border-radius: 6px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .12s; z-index: 2; }
+  .bar:hover .tip, .bar:focus-visible .tip { opacity: 1; }
+  .bar:nth-child(-n+2) .tip { left: 0; transform: none; }
+  .bar:nth-last-child(-n+2) .tip { left: auto; right: 0; transform: none; }
+  .chart-note { font-size: 11.5px; color: var(--muted); margin: 0; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* ---------- layout: phone (default) -> tablet -> computer ---------- */
+  .hero-row { display: grid; gap: 16px; }
+  .side, .brand, .tx-ref { display: none; }
+  @media (min-width: 640px) {
+    :root { --app-w: 720px; }
+    .hero-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); align-items: stretch; }
+    .balance { align-content: center; }
+  }
+  @media (min-width: 1000px) {
+    :root { --app-w: 1240px; }
+    body { background: var(--bg); }
+    .app { padding-bottom: 0; }
+    /* header and demo strip become full-width bands */
+    .top, .demo-note { box-shadow: 0 0 0 100vmax var(--header-bg); clip-path: inset(0 -100vmax); }
+    .demo-note { box-shadow: 0 0 0 100vmax var(--brand-tint); }
+    .top { padding-block: 14px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 19px; letter-spacing: -0.01em; padding-right: 20px; margin-right: 8px; border-right: 1px solid rgba(255,255,255,.18); }
+    .brand-mark { width: 32px; height: 32px; border-radius: 10px; background: var(--on-brand); color: var(--header-bg); display: grid; place-items: center; font-size: 17px; }
+    .shell { display: grid; grid-template-columns: 200px minmax(0, 1fr) 340px; grid-template-areas: "nav main side"; gap: 24px;
+             padding: 24px var(--gutter-r) 40px var(--gutter-l); align-items: start; }
+    main { grid-area: main; padding: 0; }
+    .tabs { grid-area: nav; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 96px); left: auto; transform: none; width: auto;
+            display: flex; flex-direction: column; gap: 4px; background: none; border: 0; padding: 0; z-index: 1; }
+    .tab { display: flex; align-items: center; gap: 12px; padding: 11px 14px; font-size: 14.5px; }
+    .tab:hover, .tab[aria-current="page"] { background: var(--brand-tint); }
+    .side { grid-area: side; display: grid; gap: 16px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 96px); }
+    .only-mobile { display: none !important; }
+    .amount-xl { font-size: 40px; }
+    .tx-ref { display: block; width: 190px; flex: none; font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .scrim { align-items: center; }
+    .sheet { width: min(480px, calc(100% - 48px)); max-height: 86vh; border-radius: 20px; padding-bottom: 20px; }
+    .grabber { display: none; }
+    .toast { bottom: 28px; }
+  }
+  @media (min-width: 1000px) and (max-width: 1179px) { .shell { grid-template-columns: 180px minmax(0, 1fr) 300px; } .tx-ref { width: 130px; } }
+
   @keyframes fade { from { opacity: 0; } }
   @keyframes up { from { transform: translateY(40px); opacity: .4; } }
   @keyframes pop { from { transform: scale(.5); opacity: 0; } }
@@ -220,6 +278,7 @@
 <body>
 <div class="app" id="app">
   <header class="top">
+    <div class="brand" aria-hidden="true"><span class="brand-mark">₹</span>Paisa</div>
     <button class="who" id="whoBtn" aria-label="Switch account">
       <span class="avatar" id="whoAvatar">··</span>
       <span class="who-text">
@@ -235,6 +294,7 @@
     <button id="resetDemo">Reset</button>
   </p>
 
+  <div class="shell">
   <main id="view"></main>
 
   <nav class="tabs" aria-label="Main">
@@ -243,6 +303,8 @@
     <button class="tab" data-view="accounts"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/></svg>Accounts</button>
     <button class="tab" data-view="dev"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 9-4 3 4 3M16 9l4 3-4 3M14 5l-4 14"/></svg>Developer</button>
   </nav>
+  <aside class="side" id="aside" aria-label="Summary"></aside>
+  </div>
 </div>
 
 <script src="config.js"></script>
@@ -497,6 +559,7 @@ const S = {
   accounts: [], currentId: store.get('paisa-current'), balance: 0,
   view: 'home', recent: [], hide: store.get('paisa-hide') === '1',
   hist: { type: '', page: 1, data: [] },
+  insights: { rows: [], total: 0 },
 };
 const current = () => S.accounts.find((a) => a.id === S.currentId);
 const nameOf = (id) => S.accounts.find((a) => a.id === id)?.name;
@@ -514,6 +577,7 @@ function txRow(t) {
   return `<li><button class="tx" data-tx="${t.id}">
     <span class="tx-ico ${t.type}">${txIcon(t)}</span>
     <span class="tx-main"><span class="tx-title">${esc(d.title)}</span><span class="tx-sub">${esc(d.sub)} · ${timeOf(t.created_at)}</span></span>
+    <span class="tx-ref">${esc(t.reference_id)}</span>
     <span class="tx-amt num ${t.type}">${t.type === 'credit' ? '+' : '−'}${rupees(t.amount)}<span class="kind">${t.type === 'credit' ? 'Credit' : 'Debit'}</span></span>
   </button></li>`;
 }
@@ -549,9 +613,11 @@ async function renderHome() {
       <button class="btn" style="max-width:260px" data-act="new">Create account</button></section>`;
     return;
   }
-  const [bal, hist] = await Promise.all([S.api.balance(a.id), S.api.history(a.id, { limit: 5 })]);
+  const bal = await S.api.balance(a.id);
+  const hist = { data: S.insights.rows.slice(0, 5), pagination: { total_records: S.insights.total } };
   S.balance = bal.balance; S.recent = hist.data;
   view.innerHTML = `
+    <div class="hero-row">
     <section class="card balance">
       <div class="balance-row"><span class="label">Wallet balance</span>
         <button class="icon-btn" id="hideBtn" aria-label="${S.hide ? 'Show' : 'Hide'} balance">${S.hide ? ICON.eyeOff : ICON.eye}</button></div>
@@ -568,11 +634,13 @@ async function renderHome() {
         <button class="action" data-act="new"><span class="tile">${ICON.user}</span>New account</button>
       </div>
     </section>
+    </div>
 
     <section class="card">
       <div class="section-head"><h2>Recent activity</h2>${hist.pagination.total_records > hist.data.length ? `<button class="link" data-goto="history">See all ${hist.pagination.total_records}</button>` : ''}</div>
       ${hist.data.length ? groupedList(hist.data) : `<div class="empty"><strong>No transactions yet</strong><span>Tap Add money to get started.</span></div>`}
-    </section>`;
+    </section>
+    <section class="card insights only-mobile">${insightsHtml()}</section>`;
   $('#hideBtn').onclick = () => { S.hide = !S.hide; store.set('paisa-hide', S.hide ? '1' : '0'); renderHome(); };
   $('#copyId').onclick = () => copy(a.id, 'Account ID copied');
 }
@@ -596,6 +664,50 @@ async function renderHistory() {
   view.querySelectorAll('[data-filter]').forEach((b) => (b.onclick = () => { S.hist.type = b.dataset.filter; S.hist.page = 1; renderHistory(); }));
   $('#prevPg').onclick = () => { S.hist.page--; renderHistory(); };
   $('#nextPg').onclick = () => { S.hist.page++; renderHistory(); };
+}
+
+// ---------- insights: this month's totals + money out per day (last 7 days) ----------
+async function loadInsights() {
+  const a = current();
+  if (!a) { S.insights = { rows: [], total: 0 }; return; }
+  const res = await S.api.history(a.id, { limit: 100 });
+  S.insights = { rows: res.data, total: res.pagination.total_records };
+}
+function insightsHtml() {
+  const { rows, total } = S.insights;
+  const now = new Date();
+  const r2 = (n) => Math.round(n * 100) / 100;
+  let moneyIn = 0, moneyOut = 0;
+  for (const t of rows) {
+    const d = new Date(t.created_at);
+    if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) t.type === 'credit' ? (moneyIn += t.amount) : (moneyOut += t.amount);
+  }
+  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (6 - i)); return d; });
+  const out = days.map((d) => r2(rows.filter((t) => t.type === 'debit' && new Date(t.created_at).toDateString() === d.toDateString()).reduce((s, t) => s + t.amount, 0)));
+  const max = Math.max(...out);
+  const short = (d, i) => (i === 6 ? 'Today' : d.toLocaleDateString('en-IN', { weekday: 'short' }));
+  const long = (d) => d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+  return `<h2>This month</h2>
+    <div class="stat-row">
+      <div class="stat"><span class="label">Money in</span><strong class="num">+${rupees(r2(moneyIn))}</strong></div>
+      <div class="stat"><span class="label">Money out</span><strong class="num">−${rupees(r2(moneyOut))}</strong></div>
+    </div>
+    <div>
+      <div class="chart-title">Money out, last 7 days${max ? ` · peak ${rupees(max)}` : ''}</div>
+      <div class="bars" aria-hidden="true">${out.map((v, i) => `<button class="bar" type="button" tabindex="-1">
+        <span class="bar-fill" style="height:${max ? Math.max(2, (v / max) * 100) : 2}%;${v ? '' : 'opacity:.35'}"></span>
+        <span class="tip">${long(days[i])}: ${v ? rupees(v) : 'nothing'} out</span></button>`).join('')}</div>
+      <div class="bar-labels" aria-hidden="true">${days.map((d, i) => `<span>${short(d, i)}</span>`).join('')}</div>
+      <table class="sr-only"><caption>Money out per day, last 7 days</caption><tbody>
+        ${days.map((d, i) => `<tr><th scope="row">${long(d)}</th><td>${rupees(out[i])}</td></tr>`).join('')}</tbody></table>
+    </div>
+    ${total > rows.length ? `<p class="chart-note">Based on the latest ${rows.length} of ${total} transactions.</p>` : ''}`;
+}
+function renderAside() {
+  const a = current();
+  $('#aside').innerHTML = `${a ? `<section class="card insights">${insightsHtml()}</section>` : ''}
+    <section class="card"><div class="section-head"><h2>Accounts</h2><button class="link" data-act="new">+ New account</button></div>
+      <div style="padding-bottom:6px">${accountRows()}</div></section>`;
 }
 
 function accountRows() {
@@ -857,7 +969,7 @@ function failSheet(err) {
     </div><div class="gap"></div><button class="btn" data-close>OK</button>`);
 }
 function txSheet(id) {
-  const t = [...S.recent, ...S.hist.data].find((x) => x.id === id); if (!t) return;
+  const t = [...S.recent, ...S.hist.data, ...S.insights.rows].find((x) => x.id === id); if (!t) return;
   const d = describeTx(t);
   openSheet(`${sheetHead('Transaction details')}
     <div class="result" style="padding-top:0">
@@ -887,7 +999,7 @@ async function copy(text, msg) {
   try { await navigator.clipboard.writeText(text); toast(msg); } catch { toast(text); }
 }
 async function refreshAll() {
-  try { await refreshAccounts(); await render(); }
+  try { await refreshAccounts(); await loadInsights(); await render(); renderAside(); }
   catch (err) { failSheet(err); }
 }
 async function resetDemo() {
