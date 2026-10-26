@@ -9,10 +9,22 @@ It also includes **Paisa Wallet** (`public/index.html`), a mobile-style frontend
 - **Demo mode:** otherwise it runs an in-browser copy of the same ledger rules on sample data, with the same validation, error codes and JSON.
 - **Developer tab:** shows the last request and response, and lets you point the page at any API URL.
 
+## Live demo
+
+| | URL |
+|---|---|
+| Frontend (Paisa Wallet) | https://chic-marigold-32564c.netlify.app |
+| API | https://transaction-ledger-api-w9tt.onrender.com |
+| API docs (Swagger UI) | https://transaction-ledger-api-w9tt.onrender.com/docs |
+| Health check | https://transaction-ledger-api-w9tt.onrender.com/health |
+
+The API runs on Render's free plan, which sleeps after 15 minutes without traffic, so the first request can take up to a minute. The database is Supabase Postgres in Mumbai.
+
 ---
 
 ## Contents
 
+- [Live demo](#live-demo)
 - [Quick start](#quick-start)
 - [Running the tests](#running-the-tests)
 - [Project structure](#project-structure)
