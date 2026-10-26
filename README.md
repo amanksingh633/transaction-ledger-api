@@ -106,6 +106,14 @@ Routes only parse input and shape responses. Every business rule lives in `servi
 
 ## API documentation
 
+Three ways to explore the API:
+
+- **Swagger UI** at [`/docs`](http://localhost:3000/docs): every endpoint, with "Try it out".
+- **OpenAPI 3 spec** at [`public/openapi.yaml`](public/openapi.yaml), also served at `/openapi.yaml`.
+- **Postman collection** at [`postman/transaction-ledger-api.postman_collection.json`](postman/transaction-ledger-api.postman_collection.json). It has 33 requests covering every rule, with 72 test assertions.
+  - In Postman: **Import** the file, set the `baseUrl` collection variable, then **Run collection**.
+  - From the command line: `npx newman run postman/transaction-ledger-api.postman_collection.json --env-var baseUrl=http://localhost:3000`
+
 Base URL: `http://localhost:3000` locally.
 
 All request and response bodies are JSON. Amounts are in **rupees** and can have up to 2 decimal places, e.g. `100` or `99.50`. Timestamps are ISO-8601 in UTC.

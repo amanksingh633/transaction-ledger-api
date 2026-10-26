@@ -1,0 +1,1351 @@
+{
+  "info": {
+    "name": "Transaction Ledger API",
+    "description": "Every endpoint and rule from the assignment, in order. Set baseUrl to your server (default http://localhost:3000), then use Run collection: each request has tests. Requests save the new account ids in collection variables, and a run id keeps reference_ids unique between runs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "accountA",
+      "value": ""
+    },
+    {
+      "key": "accountB",
+      "value": ""
+    },
+    {
+      "key": "run",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Accounts",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('run', Date.now().toString(36));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('status ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create account A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aman Singh\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const a = pm.response.json();",
+                  "pm.test('balance starts at 0', () => pm.expect(a.balance).to.eql(0));",
+                  "pm.test('id and created_at set by the server', () => { pm.expect(a.id).to.be.a('string'); pm.expect(a.created_at).to.be.a('string'); });",
+                  "pm.collectionVariables.set('accountA', a.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create account B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Priya Sharma\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('accountB', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: client sets balance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rich\",\n  \"balance\": 1000000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error code is INVALID_REQUEST_BODY', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_REQUEST_BODY'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: missing name",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error code is INVALID_REQUEST_BODY', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_REQUEST_BODY'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get balance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "balance"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('has account_id and balance', () => { const b = pm.response.json(); pm.expect(b.account_id).to.eql(pm.collectionVariables.get('accountA')); pm.expect(b.balance).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: account not found",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/00000000-0000-4000-8000-000000000000/balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "00000000-0000-4000-8000-000000000000",
+                "balance"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));",
+                  "pm.test('error code is ACCOUNT_NOT_FOUND', () => pm.expect(pm.response.json().error.code).to.eql('ACCOUNT_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: malformed account id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/not-a-uuid/balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "not-a-uuid",
+                "balance"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error code is INVALID_ACCOUNT_ID', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_ACCOUNT_ID'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Transactions",
+      "item": [
+        {
+          "name": "Credit 100",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"credit\",\n  \"amount\": 100,\n  \"reference_id\": \"CR-100-{{run}}\",\n  \"description\": \"Opening deposit\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('balance is 100', () => pm.expect(pm.response.json().account_balance).to.eql(100));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit 50",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"credit\",\n  \"amount\": 50,\n  \"reference_id\": \"CR-50-{{run}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('balance is 150', () => pm.expect(pm.response.json().account_balance).to.eql(150));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Debit 30",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"debit\",\n  \"amount\": 30,\n  \"reference_id\": \"DB-30-{{run}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('balance is 120', () => pm.expect(pm.response.json().account_balance).to.eql(120));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: debit more than balance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"debit\",\n  \"amount\": 150,\n  \"reference_id\": \"DB-150-{{run}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 Unprocessable Entity', () => pm.response.to.have.status(422));",
+                  "pm.test('error code is INSUFFICIENT_BALANCE', () => pm.expect(pm.response.json().error.code).to.eql('INSUFFICIENT_BALANCE'));",
+                  "pm.test('reports balance and requested', () => { const d = pm.response.json().error.details; pm.expect(d.balance).to.eql(120); pm.expect(d.requested).to.eql(150); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Debit 20",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"debit\",\n  \"amount\": 20,\n  \"reference_id\": \"DB-20-{{run}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('balance is 100 (0 + 100 + 50 - 30 - 20)', () => pm.expect(pm.response.json().account_balance).to.eql(100));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: duplicate reference_id",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"credit\",\n  \"amount\": 100,\n  \"reference_id\": \"CR-100-{{run}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('error code is DUPLICATE_TRANSACTION', () => pm.expect(pm.response.json().error.code).to.eql('DUPLICATE_TRANSACTION'));",
+                  "pm.test('returns the original transaction', () => pm.expect(pm.response.json().error.details.transaction.reference_id).to.eql('CR-100-' + pm.collectionVariables.get('run')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Same reference_id on another account is allowed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountB}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountB}}",
+                "transactions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"credit\",\n  \"amount\": 50,\n  \"reference_id\": \"CR-100-{{run}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Balance unchanged by rejected requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "balance"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('balance is still 100', () => pm.expect(pm.response.json().balance).to.eql(100));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: invalid type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"refund\",\n  \"amount\": 10,\n  \"reference_id\": \"X-{{run}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error code is INVALID_TRANSACTION_TYPE', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_TRANSACTION_TYPE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: amount 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"credit\",\n  \"amount\": 0,\n  \"reference_id\": \"X-{{run}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error code is INVALID_AMOUNT', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_AMOUNT'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: missing reference_id",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"credit\",\n  \"amount\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error code is INVALID_REQUEST_BODY', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_REQUEST_BODY'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: transaction on missing account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/00000000-0000-4000-8000-000000000000/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "00000000-0000-4000-8000-000000000000",
+                "transactions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"credit\",\n  \"amount\": 10,\n  \"reference_id\": \"X-{{run}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));",
+                  "pm.test('error code is ACCOUNT_NOT_FOUND', () => pm.expect(pm.response.json().error.code).to.eql('ACCOUNT_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. History",
+      "item": [
+        {
+          "name": "All transactions (newest first)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('4 transactions, rejected ones not saved', () => pm.expect(body.pagination.total_records).to.eql(4));",
+                  "pm.test('newest first', () => { const t = body.data.map(x => Date.parse(x.created_at)); pm.expect(t).to.eql([...t].sort((a, b) => b - a)); });",
+                  "pm.test('pagination fields', () => pm.expect(body.pagination).to.have.keys('current_page', 'page_size', 'total_records', 'total_pages'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Only credits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions?type=credit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "credit"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('only credits', () => pm.expect(pm.response.json().data.every(t => t.type === 'credit')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Page 2, 3 per page",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions?page=2&limit=3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "2"
+                },
+                {
+                  "key": "limit",
+                  "value": "3"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('page meta', () => pm.expect(pm.response.json().pagination).to.eql({ current_page: 2, page_size: 3, total_records: 4, total_pages: 2 }));",
+                  "pm.test('1 item on page 2', () => pm.expect(pm.response.json().data.length).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: page=0",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions?page=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error code is INVALID_PAGINATION', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_PAGINATION'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: limit=101",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions?limit=101",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "101"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error code is INVALID_PAGINATION', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_PAGINATION'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: invalid type filter",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions?type=refund",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "refund"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error code is INVALID_TRANSACTION_TYPE', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_TRANSACTION_TYPE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: delete a transaction (immutable)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "transactions"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('405 Method Not Allowed', () => pm.response.to.have.status(405));",
+                  "pm.test('error code is METHOD_NOT_ALLOWED', () => pm.expect(pm.response.json().error.code).to.eql('METHOD_NOT_ALLOWED'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Transfers (bonus)",
+      "item": [
+        {
+          "name": "Transfer 30 from A to B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transfers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_account_id\": \"{{accountA}}\",\n  \"to_account_id\": \"{{accountB}}\",\n  \"amount\": 30,\n  \"reference_id\": \"TRF-{{run}}\",\n  \"description\": \"Rent share\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const r = pm.response.json();",
+                  "pm.test('A: 100 -> 70', () => pm.expect(r.from_account.balance).to.eql(70));",
+                  "pm.test('B: 50 -> 80', () => pm.expect(r.to_account.balance).to.eql(80));",
+                  "pm.test('two linked legs', () => { pm.expect(r.debit_transaction.transfer_id).to.eql(r.transfer.id); pm.expect(r.credit_transaction.transfer_id).to.eql(r.transfer.id); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: repeat the same transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transfers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_account_id\": \"{{accountA}}\",\n  \"to_account_id\": \"{{accountB}}\",\n  \"amount\": 30,\n  \"reference_id\": \"TRF-{{run}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('error code is DUPLICATE_TRANSFER', () => pm.expect(pm.response.json().error.code).to.eql('DUPLICATE_TRANSFER'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: transfer more than balance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transfers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_account_id\": \"{{accountA}}\",\n  \"to_account_id\": \"{{accountB}}\",\n  \"amount\": 1000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 Unprocessable Entity', () => pm.response.to.have.status(422));",
+                  "pm.test('error code is INSUFFICIENT_BALANCE', () => pm.expect(pm.response.json().error.code).to.eql('INSUFFICIENT_BALANCE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: transfer to same account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transfers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_account_id\": \"{{accountA}}\",\n  \"to_account_id\": \"{{accountA}}\",\n  \"amount\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error code is SAME_ACCOUNT_TRANSFER', () => pm.expect(pm.response.json().error.code).to.eql('SAME_ACCOUNT_TRANSFER'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject: destination does not exist",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transfers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_account_id\": \"{{accountA}}\",\n  \"to_account_id\": \"00000000-0000-4000-8000-000000000000\",\n  \"amount\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));",
+                  "pm.test('error code is ACCOUNT_NOT_FOUND', () => pm.expect(pm.response.json().error.code).to.eql('ACCOUNT_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Balances after transfers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountA}}/balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountA}}",
+                "balance"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('A is 70 (failed transfers changed nothing)', () => pm.expect(pm.response.json().balance).to.eql(70));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

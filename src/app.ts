@@ -21,8 +21,8 @@ export function createApp() {
   app.use('/accounts', accountsRouter);
   app.use('/transfers', transfersRouter);
 
-  // A small page to try the API from a browser (served at /).
-  app.use(express.static(path.join(__dirname, '..', 'public')));
+  // Paisa Wallet frontend at /, API docs (Swagger UI) at /docs, spec at /openapi.yaml.
+  app.use(express.static(path.join(__dirname, '..', 'public'), { extensions: ['html'] }));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

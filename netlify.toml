@@ -1,5 +1,7 @@
-# Netlify hosts only the static frontend in public/.
-# Set API_BASE_URL in public/config.js to your Render backend URL before deploying.
+# Netlify hosts the static frontend (public/): the wallet at / and API docs at /docs.
+# Set API_BASE_URL in Netlify (Site configuration -> Environment variables) to your
+# Render URL, e.g. https://transaction-ledger-api.onrender.com. The build writes it
+# into config.js, so the pages call that API.
 [build]
   publish = "public"
-  command = ""
+  command = "echo \"window.API_BASE_URL = '${API_BASE_URL}';\" > public/config.js"

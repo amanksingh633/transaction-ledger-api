@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Transaction Ledger API Docs</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css" />
+  <style>body { margin: 0; background: #fff; } .topbar { display: none; }</style>
+</head>
+<body>
+  <div id="swagger"></div>
+  <script src="config.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
+  <script>
+    // When this page is hosted apart from the API (e.g. Netlify), send "Try it out"
+    // requests to the API URL from config.js instead of this site.
+    const apiBase = (window.API_BASE_URL || '').replace(/\/$/, '');
+    SwaggerUIBundle({
+      url: 'openapi.yaml',
+      dom_id: '#swagger',
+      deepLinking: true,
+      tryItOutEnabled: true,
+      requestInterceptor: (req) => {
+        if (apiBase && req.url.startsWith(location.origin) && !req.url.endsWith('openapi.yaml')) {
+          req.url = apiBase + req.url.slice(location.origin.length);
+        }
+        return req;
+      },
+    });
+  </script>
+</body>
+</html>
