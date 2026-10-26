@@ -1,0 +1,5 @@
+# Netlify hosts only the static frontend in public/.
+# Set API_BASE_URL in public/config.js to your Render backend URL before deploying.
+[build]
+  publish = "public"
+  command = ""

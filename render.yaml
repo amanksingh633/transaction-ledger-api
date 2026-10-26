@@ -1,0 +1,17 @@
+# Render Blueprint for the backend API (optional; you can also create the
+# Web Service by hand with the same settings).
+services:
+  - type: web
+    name: transaction-ledger-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # paste the Supabase connection string in the dashboard
+      - key: DATABASE_SSL
+        value: "true"
+      - key: CORS_ORIGIN
+        value: "*"

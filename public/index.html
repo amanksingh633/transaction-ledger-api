@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Transaction Ledger</title>
+  <style>
+    :root {
+      --bg: #f6f7f9; --card: #fff; --text: #1d2330; --muted: #667085; --border: #e3e6eb;
+      --accent: #2f5bea; --credit: #127a3c; --debit: #b42318; --error-bg: #fdecea;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: var(--text); }
+    header { padding: 16px; border-bottom: 1px solid var(--border); background: var(--card); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 18px; margin: 0; }
+    main { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; grid-template-columns: 320px 1fr; }
+    @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+    section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    h2 { font-size: 15px; margin: 0 0 12px; }
+    label { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 4px; }
+    input, select, button { font: inherit; width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--text); }
+    button { background: var(--accent); color: #fff; border: 0; cursor: pointer; margin-top: 10px; }
+    button.secondary { background: #fff; color: var(--text); border: 1px solid var(--border); width: auto; margin: 0; }
+    .row { display: flex; gap: 8px; align-items: end; }
+    .row > * { flex: 1; }
+    .accounts { list-style: none; padding: 0; margin: 0; max-height: 260px; overflow: auto; }
+    .accounts li { padding: 8px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+    .accounts li:hover { background: var(--bg); }
+    .accounts li.active { background: #e8eefc; }
+    .balance { font-size: 28px; font-weight: 600; margin: 4px 0 12px; }
+    .muted { color: var(--muted); font-size: 13px; word-break: break-all; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+    td.when { white-space: nowrap; }
+    td.amount { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .credit { color: var(--credit); } .debit { color: var(--debit); }
+    .table-wrap { overflow-x: auto; }
+    .pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 10px; }
+    #log { white-space: pre-wrap; font: 12px/1.4 ui-monospace, Menlo, monospace; background: #0f1420; color: #d6deeb; border-radius: 8px; padding: 12px; max-height: 260px; overflow: auto; margin: 0; }
+    .error { background: var(--error-bg); color: var(--debit); padding: 8px 10px; border-radius: 6px; margin-top: 10px; font-size: 14px; }
+    .grid2 { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } }
+    .api-base { display: flex; gap: 8px; align-items: center; min-width: 0; flex: 1; max-width: 460px; }
+    .api-base input { flex: 1; min-width: 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Transaction Ledger</h1>
+    <div class="api-base">
+      <span class="muted">API</span>
+      <input id="apiBase" placeholder="same origin" />
+    </div>
+  </header>
+
+  <main>
+    <div style="display: grid; gap: 16px; align-content: start;">
+      <section>
+        <h2>New account</h2>
+        <form id="accountForm">
+          <label for="accName">Name</label>
+          <input id="accName" required placeholder="Aman Singh" />
+          <button>Create account</button>
+        </form>
+      </section>
+      <section>
+        <h2>Accounts</h2>
+        <ul class="accounts" id="accounts"><li class="muted">Loading…</li></ul>
+      </section>
+    </div>
+
+    <div style="display: grid; gap: 16px; align-content: start; min-width: 0;">
+      <section id="detail">
+        <p class="muted">Create or pick an account to start.</p>
+      </section>
+
+      <div class="grid2">
+        <section>
+          <h2>Credit / debit</h2>
+          <form id="txForm">
+            <div class="row">
+              <div><label for="txType">Type</label>
+                <select id="txType"><option value="credit">credit</option><option value="debit">debit</option></select></div>
+              <div><label for="txAmount">Amount (₹)</label><input id="txAmount" type="number" step="0.01" min="0.01" required /></div>
+            </div>
+            <label for="txRef">Reference ID</label>
+            <input id="txRef" required />
+            <label for="txDesc">Description</label>
+            <input id="txDesc" placeholder="optional" />
+            <button>Post transaction</button>
+          </form>
+        </section>
+        <section>
+          <h2>Transfer</h2>
+          <form id="trForm">
+            <label for="trTo">To account</label>
+            <select id="trTo"></select>
+            <div class="row">
+              <div><label for="trAmount">Amount (₹)</label><input id="trAmount" type="number" step="0.01" min="0.01" required /></div>
+              <div><label for="trRef">Reference ID</label><input id="trRef" placeholder="optional" /></div>
+            </div>
+            <button>Transfer from selected account</button>
+          </form>
+        </section>
+      </div>
+
+      <section>
+        <div class="row" style="margin-bottom: 8px;">
+          <h2 style="margin: 0;">History</h2>
+          <select id="filterType" style="max-width: 160px;">
+            <option value="">All types</option><option value="credit">Credits</option><option value="debit">Debits</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>When</th><th>Type</th><th>Reference</th><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
+            <tbody id="history"></tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <span class="muted" id="pageInfo"></span>
+          <button class="secondary" id="prev">Prev</button>
+          <button class="secondary" id="next">Next</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Last API response</h2>
+        <pre id="log">—</pre>
+      </section>
+    </div>
+  </main>
+
+  <script src="config.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const inr = (n) => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+    // API base: ?api=… or the saved value, else window.API_BASE_URL, else same origin.
+    const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+    const fromQuery = new URLSearchParams(location.search).get('api');
+    $('apiBase').value = fromQuery || store.get('apiBase') || window.API_BASE_URL || '';
+    $('apiBase').addEventListener('change', () => { store.set('apiBase', $('apiBase').value.trim()); loadAccounts(); });
+    const base = () => $('apiBase').value.trim().replace(/\/$/, '');
+
+    let selected = null, page = 1, accounts = [];
+    const newRef = () => 'ref-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    $('txRef').value = newRef();
+
+    async function call(method, path, body) {
+      const started = performance.now();
+      let res, data;
+      try {
+        res = await fetch(base() + path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+        data = await res.json().catch(() => null);
+      } catch (e) {
+        $('log').textContent = `${method} ${path}\nNetwork error: ${e.message}\n(Is the API running? Is the API URL above correct?)`;
+        throw e;
+      }
+      $('log').textContent = `${method} ${path}  →  ${res.status}  (${Math.round(performance.now() - started)} ms)\n` +
+        (body ? `request: ${JSON.stringify(body)}\n` : '') + JSON.stringify(data, null, 2);
+      if (!res.ok) throw Object.assign(new Error(data?.error?.message || res.statusText), { data });
+      return data;
+    }
+
+    function showError(form, err) {
+      form.querySelector('.error')?.remove();
+      if (!err) return;
+      const div = document.createElement('div');
+      div.className = 'error';
+      div.textContent = (err.data?.error?.code ? err.data.error.code + ': ' : '') + err.message;
+      form.appendChild(div);
+    }
+
+    async function loadAccounts() {
+      try {
+        accounts = (await call('GET', '/accounts?limit=100')).data;
+      } catch { $('accounts').innerHTML = '<li class="muted">Could not load accounts.</li>'; return; }
+      $('accounts').innerHTML = accounts.length ? accounts.map((a) =>
+        `<li data-id="${a.id}" class="${a.id === selected ? 'active' : ''}"><span>${esc(a.name)}</span><span class="muted">${inr(a.balance)}</span></li>`
+      ).join('') : '<li class="muted">No accounts yet.</li>';
+      $('trTo').innerHTML = accounts.filter((a) => a.id !== selected)
+        .map((a) => `<option value="${a.id}">${esc(a.name)} (${a.id.slice(0, 8)})</option>`).join('');
+    }
+
+    async function loadDetail() {
+      if (!selected) return;
+      const [acc, bal] = [accounts.find((a) => a.id === selected), await call('GET', `/accounts/${selected}/balance`)];
+      $('detail').innerHTML = `<h2>${esc(acc?.name ?? 'Account')}</h2><div class="balance">${inr(bal.balance)}</div><div class="muted">ID: ${selected}</div>`;
+      const type = $('filterType').value;
+      const h = await call('GET', `/accounts/${selected}/transactions?page=${page}&limit=10${type ? '&type=' + type : ''}`);
+      $('history').innerHTML = h.data.length ? h.data.map((t) => `<tr>
+          <td class="muted when">${new Date(t.created_at).toLocaleString()}</td>
+          <td class="${t.type}">${t.type}</td><td>${esc(t.reference_id)}</td><td>${esc(t.description)}</td>
+          <td class="amount ${t.type}">${t.type === 'debit' ? '−' : '+'}${inr(t.amount)}</td></tr>`).join('')
+        : '<tr><td colspan="5" class="muted">No transactions.</td></tr>';
+      const p = h.pagination;
+      $('pageInfo').textContent = `Page ${p.current_page} of ${Math.max(p.total_pages, 1)} · ${p.total_records} records`;
+      $('prev').disabled = p.current_page <= 1;
+      $('next').disabled = p.current_page >= p.total_pages;
+    }
+
+    async function refresh() { await loadAccounts(); await loadDetail(); }
+
+    $('accounts').addEventListener('click', (e) => {
+      const li = e.target.closest('li[data-id]');
+      if (!li) return;
+      selected = li.dataset.id; page = 1; refresh();
+    });
+
+    $('accountForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const acc = await call('POST', '/accounts', { name: $('accName').value });
+        $('accName').value = ''; selected = acc.id; page = 1; showError(e.target); await refresh();
+      } catch (err) { showError(e.target, err); }
+    });
+
+    $('txForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!selected) return showError(e.target, new Error('Pick an account first'));
+      try {
+        await call('POST', `/accounts/${selected}/transactions`, {
+          type: $('txType').value, amount: Number($('txAmount').value),
+          reference_id: $('txRef').value, description: $('txDesc').value || undefined,
+        });
+        showError(e.target); $('txRef').value = newRef(); page = 1;
+        await refresh();
+      } catch (err) { showError(e.target, err); } // keep the error response visible in the log
+    });
+
+    $('trForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!selected) return showError(e.target, new Error('Pick the source account first'));
+      try {
+        await call('POST', '/transfers', {
+          from_account_id: selected, to_account_id: $('trTo').value,
+          amount: Number($('trAmount').value), reference_id: $('trRef').value || undefined,
+        });
+        showError(e.target); $('trRef').value = '';
+        await refresh();
+      } catch (err) { showError(e.target, err); }
+    });
+
+    $('filterType').addEventListener('change', () => { page = 1; loadDetail(); });
+    $('prev').addEventListener('click', () => { page--; loadDetail(); });
+    $('next').addEventListener('click', () => { page++; loadDetail(); });
+
+    loadAccounts();
+  </script>
+</body>
+</html>
